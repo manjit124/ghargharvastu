@@ -1,0 +1,6 @@
+{
+  "name": "VastuVision AI",
+  "description": "Your AI Vastu Home Advisor - Upload photos of any room, wall, door, or furniture for personalized, practical Vastu problem solving with intelligent direction guidance.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

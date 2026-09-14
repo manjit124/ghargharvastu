@@ -1,0 +1,29 @@
+{
+  "deviceRegistry": {
+    "dev_12c70166a5b99634f9388141": {
+      "deviceId": "dev_12c70166a5b99634f9388141",
+      "firstSeenAt": 1789322885208,
+      "lastSeenAt": 1789322885208,
+      "registeredUserIds": [
+        "usr_1789322885205_484"
+      ],
+      "registeredEmails": [
+        "audittester@example.com"
+      ],
+      "freeTrialsClaimed": 1,
+      "isFlaggedAbusive": false,
+      "abuseReasons": []
+    }
+  },
+  "canonicalEmailRegistry": {
+    "audittester@example.com": {
+      "canonicalEmail": "audittester@example.com",
+      "firstSeenAt": 1789322885208,
+      "associatedUserIds": [
+        "usr_1789322885205_484"
+      ],
+      "freeTrialClaimed": true
+    }
+  },
+  "googleSubRegistry": {}
+}

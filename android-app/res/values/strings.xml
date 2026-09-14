@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">VastuVision AI</string>
+    <string name="loading">Loading VastuVision AI…</string>
+    <string name="offline_title">No Internet Connection</string>
+    <string name="offline_desc">Unable to connect to VastuVision AI servers. Please check your Wi-Fi or mobile data connection and try again.</string>
+    <string name="retry">Retry Connection</string>
+    <string name="exit_prompt">Press back again to exit</string>
+</resources>
