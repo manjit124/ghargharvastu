@@ -593,6 +593,42 @@
   ],
   "users": [
     {
+      "id": "usr_m_1789465330754_354",
+      "name": "Test User",
+      "email": "user_919820123456@phone.vastuvision.ai",
+      "mobile": "919820123456",
+      "isMobileVerified": true,
+      "authProvider": "mobile_otp",
+      "preferredLanguage": "hi",
+      "createdAt": "2026-09-15T09:42:10.753Z",
+      "updatedAt": "2026-09-15T09:42:10.753Z",
+      "lastActive": "2026-09-15T09:42:10.753Z",
+      "plan": "free",
+      "status": "active",
+      "questionsAsked": 0,
+      "photosAnalyzed": 0,
+      "roomScansCompleted": 0,
+      "savedReportsCount": 0
+    },
+    {
+      "id": "usr_m_1789464925907_88",
+      "name": "Aarav Sharma",
+      "email": "user_919876543210@phone.vastuvision.ai",
+      "mobile": "919876543210",
+      "isMobileVerified": true,
+      "authProvider": "mobile_otp",
+      "preferredLanguage": "hi",
+      "createdAt": "2026-09-15T09:35:25.907Z",
+      "updatedAt": "2026-09-15T09:35:30.631Z",
+      "lastActive": "2026-09-15T09:35:30.631Z",
+      "plan": "free",
+      "status": "active",
+      "questionsAsked": 0,
+      "photosAnalyzed": 0,
+      "roomScansCompleted": 0,
+      "savedReportsCount": 0
+    },
+    {
       "id": "usr_1789322885205_484",
       "name": "Audit Tester",
       "email": "audittester@example.com",
@@ -615,7 +651,7 @@
       "passwordHash": "$2b$10$UpxjCHF3YLfBdymwxT4q7.XlTMQ77dYNx/46r1YxAI92pgmGB4/VO",
       "preferredLanguage": "hi",
       "createdAt": "2026-09-12T17:22:06.506Z",
-      "updatedAt": "2026-09-13T18:00:58.740Z",
+      "updatedAt": "2026-09-15T09:37:54.281Z",
       "lastActive": "2026-09-12T17:22:06.506Z",
       "plan": "free",
       "status": "active",
@@ -2050,6 +2086,32 @@
     "rewardedDailyLimitReached": 0
   },
   "creditLedger": [
+    {
+      "id": "tx_1789465330754_755",
+      "userId": "usr_m_1789465330754_354",
+      "userName": "Test User",
+      "userEmail": "user_919820123456@phone.vastuvision.ai",
+      "transactionId": "trial_usr_m_1789465330754_354",
+      "type": "FREE_TRIAL",
+      "amount": 0,
+      "balanceBefore": 0,
+      "balanceAfter": 0,
+      "reason": "New User Free Trial initiated: 5 Chat Minutes + 5 Photo Analyses",
+      "createdAt": "2026-09-15T09:42:10.754Z"
+    },
+    {
+      "id": "tx_1789464925907_72",
+      "userId": "usr_m_1789464925907_88",
+      "userName": "Aarav Sharma",
+      "userEmail": "user_919876543210@phone.vastuvision.ai",
+      "transactionId": "trial_usr_m_1789464925907_88",
+      "type": "FREE_TRIAL",
+      "amount": 0,
+      "balanceBefore": 0,
+      "balanceAfter": 0,
+      "reason": "New User Free Trial initiated: 5 Chat Minutes + 5 Photo Analyses",
+      "createdAt": "2026-09-15T09:35:25.907Z"
+    },
     {
       "id": "tx_1789322885205_761",
       "userId": "usr_1789322885205_484",
@@ -5355,14 +5417,14 @@
       "trialAbuseDetected": true,
       "trialAbuseNotice": "इस डिवाइस पर पहले से ही 5 निःशुल्क वास्तु परामर्श उपयोग किए जा चुके हैं। असीमित परामर्श और 3D वास्तु उपचारों के लिए कृपया प्रो प्लान (₹99) पर अपग्रेड करें।",
       "todayUsage": {
-        "date": "2026-09-13",
+        "date": "2026-09-15",
         "aiRequestsCount": 0,
         "imageAnalysesCount": 0,
         "homeScansCount": 0,
         "adsWatchedCount": 0
       },
       "createdAt": "2026-09-12T17:22:06.506Z",
-      "updatedAt": "2026-09-13T18:00:58.741Z",
+      "updatedAt": "2026-09-15T09:37:54.281Z",
       "preferredLanguage": "hi"
     },
     {
@@ -5391,14 +5453,14 @@
       "userName": "Audit Tester",
       "userEmail": "audittester@example.com",
       "plan": "free",
-      "freeChatMinutesRemaining": 5,
+      "freeChatMinutesRemaining": 4,
       "freePhotosRemaining": 5,
       "creditsBalance": 0,
       "totalSpentCredits": 0,
       "trialAbuseDetected": false,
       "todayUsage": {
         "date": "2026-09-13",
-        "aiRequestsCount": 0,
+        "aiRequestsCount": 1,
         "imageAnalysesCount": 0,
         "homeScansCount": 0,
         "adsWatchedCount": 0
@@ -5406,6 +5468,47 @@
       "createdAt": "2026-09-13T18:08:05.205Z",
       "updatedAt": "2026-09-13T18:08:05.205Z",
       "preferredLanguage": "hi"
+    },
+    {
+      "userId": "usr_m_1789464925907_88",
+      "userName": "Aarav Sharma",
+      "userEmail": "user_919876543210@phone.vastuvision.ai",
+      "plan": "free",
+      "freeChatMinutesRemaining": 5,
+      "freePhotosRemaining": 5,
+      "creditsBalance": 0,
+      "totalSpentCredits": 0,
+      "trialAbuseDetected": false,
+      "todayUsage": {
+        "date": "2026-09-15",
+        "aiRequestsCount": 0,
+        "imageAnalysesCount": 0,
+        "homeScansCount": 0,
+        "adsWatchedCount": 0
+      },
+      "createdAt": "2026-09-15T09:35:25.907Z",
+      "updatedAt": "2026-09-15T09:35:25.907Z",
+      "preferredLanguage": "hi"
+    },
+    {
+      "userId": "usr_m_1789465330754_354",
+      "userName": "Test User",
+      "userEmail": "user_919820123456@phone.vastuvision.ai",
+      "plan": "free",
+      "freeChatMinutesRemaining": 5,
+      "freePhotosRemaining": 5,
+      "creditsBalance": 0,
+      "totalSpentCredits": 0,
+      "trialAbuseDetected": false,
+      "todayUsage": {
+        "date": "2026-09-15",
+        "aiRequestsCount": 0,
+        "imageAnalysesCount": 0,
+        "homeScansCount": 0,
+        "adsWatchedCount": 0
+      },
+      "createdAt": "2026-09-15T09:42:10.754Z",
+      "updatedAt": "2026-09-15T09:42:10.754Z"
     }
   ],
   "rewardTransactionTokens": [
@@ -5422,7 +5525,7 @@
     "dailyBudgetThresholdUSD": 50,
     "monthlyBudgetThresholdUSD": 1000,
     "todayRequestCount": 0,
-    "todayResetDate": "2026-09-13",
+    "todayResetDate": "2026-09-15",
     "monthRequestCount": 0,
     "monthResetDate": "2026-09",
     "totalTokensUsed": 0,

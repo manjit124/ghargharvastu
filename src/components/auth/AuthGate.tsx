@@ -13,8 +13,13 @@ import {
   Compass,
   KeyRound,
   ArrowLeft,
+  Smartphone,
+  RefreshCw,
+  Edit3,
+  LogOut,
+  Check,
 } from 'lucide-react';
-import { authService, AuthSuccessResponse } from '../../services/authService';
+import { authService, AuthSuccessResponse, AuthSessionResponse } from '../../services/authService';
 import { setPreferredLanguage, AppLanguage } from '../../services/languageService';
 
 declare global {
@@ -27,15 +32,29 @@ interface AuthGateProps {
   onAuthenticated: (authData: AuthSuccessResponse) => void;
 }
 
-type AuthMode = 'login' | 'register' | 'forgot';
+type AuthChannel = 'mobile' | 'email';
+type EmailAuthMode = 'login' | 'register' | 'forgot';
+type MobileStep = 'input' | 'verify';
 
 export const AuthGate: React.FC<AuthGateProps> = ({ onAuthenticated }) => {
   // Navigation & Mode States
   const [selectedLanguage, setSelectedLanguage] = useState<AppLanguage>('hi');
-  const [authMode, setAuthMode] = useState<AuthMode>('login');
-  const [step, setStep] = useState<'form' | 'forgot_confirm' | 'success'>('form');
+  const [authChannel, setAuthChannel] = useState<AuthChannel>('mobile'); // Default to Mobile OTP!
+  const [emailAuthMode, setEmailAuthMode] = useState<EmailAuthMode>('login');
+  const [screenStep, setScreenStep] = useState<'form' | 'forgot_confirm' | 'success' | 'existing_session'>('form');
 
-  // Form Fields
+  // Mobile OTP States
+  const [mobileStep, setMobileStep] = useState<MobileStep>('input');
+  const [mobileNumber, setMobileNumber] = useState('');
+  const [mobileName, setMobileName] = useState('');
+  const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
+  const [otpCooldown, setOtpCooldown] = useState(0);
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [isOtpBlocked, setIsOtpBlocked] = useState(false);
+  const [displayMaskedMobile, setDisplayMaskedMobile] = useState('');
+  const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // Email & Password Fields
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -47,20 +66,47 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthenticated }) => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [devResetCode, setDevResetCode] = useState<string | null>(null);
 
+  // Existing Session State (if already logged in)
+  const [existingSession, setExistingSession] = useState<AuthSessionResponse | null>(null);
+
   // Status & Feedback
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [authConfig, setAuthConfig] = useState<{
     google: { configured: boolean; clientId: string };
+    mobile?: { configured: boolean };
   } | null>(null);
 
   // Success Screen Data
   const [successAuthData, setSuccessAuthData] = useState<AuthSuccessResponse | null>(null);
   const googleBtnRef = useRef<HTMLDivElement>(null);
 
-  // Fetch server configuration on mount
+  // Cooldown countdown timer effect
   useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    if (otpCooldown > 0) {
+      timer = setInterval(() => {
+        setOtpCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [otpCooldown]);
+
+  // Fetch server configuration and check existing session on mount
+  useEffect(() => {
+    // Check if user is already logged in
+    authService.getSession().then((session) => {
+      if (session.authenticated && session.user) {
+        setExistingSession(session);
+        setScreenStep('existing_session');
+      }
+    }).catch(() => {
+      // no existing session, normal flow
+    });
+
     authService.getConfig().then((cfg) => {
       setAuthConfig(cfg);
       // Attempt to initialize Google Identity Services button if configured
@@ -74,7 +120,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthenticated }) => {
                   setIsLoading(true);
                   const res = await authService.loginWithGoogle({ credential: response.credential });
                   setSuccessAuthData(res);
-                  setStep('success');
+                  setScreenStep('success');
                   setTimeout(() => onAuthenticated(res), 1500);
                 } catch (err: any) {
                   setError(err.message || 'Google authentication failed');
@@ -98,11 +144,201 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthenticated }) => {
         }
       }
     });
-  }, []);
+  }, [onAuthenticated]);
 
   const handleLanguageChange = (lang: AppLanguage) => {
     setSelectedLanguage(lang);
     setPreferredLanguage(lang);
+  };
+
+  // ==========================================
+  // MOBILE OTP FLOW
+  // ==========================================
+  const handleMobileNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Allow only digits, max 10
+    const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+    setMobileNumber(val);
+    if (error) setError(null);
+  };
+
+  const handleSendMobileOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setNotice(null);
+
+    const cleanNum = mobileNumber.trim();
+    if (cleanNum.length !== 10) {
+      setError(
+        selectedLanguage === 'hi'
+          ? 'कृपया 10 अंकों का मान्य भारतीय मोबाइल नंबर दर्ज करें।'
+          : selectedLanguage === 'hinglish'
+          ? 'Kripya 10 digits ka valid Indian mobile number enter karein.'
+          : 'Please enter a valid 10-digit Indian mobile number.'
+      );
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const res = await authService.sendMobileOtp(cleanNum, mobileName.trim() || undefined);
+      setDisplayMaskedMobile(res.displayMobile || `+91 ${cleanNum}`);
+      setOtpCooldown(res.cooldownSeconds || 60);
+      setFailedAttempts(0);
+      setIsOtpBlocked(false);
+      setOtpDigits(['', '', '', '', '', '']);
+
+      setNotice(
+        res.message ||
+          (selectedLanguage === 'hi'
+            ? `OTP आपके मोबाइल नंबर ${res.displayMobile || cleanNum} पर भेजा गया है।`
+            : `OTP has been dispatched to ${res.displayMobile || cleanNum}.`)
+      );
+      setMobileStep('verify');
+
+      // Auto-focus first digit box on next tick
+      setTimeout(() => {
+        otpInputRefs.current[0]?.focus();
+      }, 100);
+    } catch (err: any) {
+      setError(err.message || 'OTP भेजने में विफलता हुई। कृपया पुनः प्रयास करें।');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle individual OTP digit change
+  const handleOtpDigitChange = (index: number, val: string) => {
+    if (isOtpBlocked) return;
+    const digit = val.replace(/\D/g, '').slice(-1);
+    const newDigits = [...otpDigits];
+    newDigits[index] = digit;
+    setOtpDigits(newDigits);
+    setError(null);
+
+    // Auto-advance to next box
+    if (digit && index < 5) {
+      otpInputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  // Handle backspace navigation in OTP boxes
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !otpDigits[index] && index > 0) {
+      otpInputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  // Handle paste in OTP box
+  const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (!pasted) return;
+    const newDigits = [...otpDigits];
+    for (let i = 0; i < 6; i++) {
+      newDigits[i] = pasted[i] || '';
+    }
+    setOtpDigits(newDigits);
+    const targetIdx = Math.min(pasted.length, 5);
+    otpInputRefs.current[targetIdx]?.focus();
+  };
+
+  const handleVerifyMobileOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isOtpBlocked) return;
+    setError(null);
+    setNotice(null);
+
+    const code = otpDigits.join('').trim();
+    if (code.length !== 6) {
+      setError(
+        selectedLanguage === 'hi'
+          ? 'कृपया पूरा 6-अंकों का OTP कोड दर्ज करें।'
+          : selectedLanguage === 'hinglish'
+          ? 'Kripya poora 6-digits ka OTP enter karein.'
+          : 'Please enter the complete 6-digit OTP code.'
+      );
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const res = await authService.verifyMobileOtp(
+        mobileNumber.trim(),
+        code,
+        mobileName.trim() || undefined,
+        selectedLanguage
+      );
+
+      setSuccessAuthData(res);
+      setScreenStep('success');
+      setTimeout(() => onAuthenticated(res), 1500);
+    } catch (err: any) {
+      const newAttempts = failedAttempts + 1;
+      setFailedAttempts(newAttempts);
+
+      if (newAttempts >= 3 || err.attemptsRemaining === 0 || err.message?.includes('अधिकतम 3')) {
+        setIsOtpBlocked(true);
+        setError(
+          selectedLanguage === 'hi'
+            ? 'अधिकतम 3 गलत कोशिशें! सुरक्षा कारणों से यह OTP रद्द कर दिया गया है। कृपया नीचे "पुनः OTP भेजें" पर क्लिक करें।'
+            : selectedLanguage === 'hinglish'
+            ? 'Maximum 3 galat koshishein! Security reasons se yeh OTP cancel ho gaya hai. Naya OTP request karein.'
+            : 'Maximum 3 failed attempts reached. For security, this OTP is invalidated. Please request a new OTP.'
+        );
+      } else {
+        const remaining = 3 - newAttempts;
+        setError(
+          err.message ||
+            (selectedLanguage === 'hi'
+              ? `गलत OTP कोड दर्ज किया गया। आपके पास 3 में से ${remaining} कोशिश शेष है।`
+              : `Incorrect OTP. You have ${remaining} attempt(s) remaining.`)
+        );
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendMobileOtp = async () => {
+    if (otpCooldown > 0 || isLoading) return;
+    setError(null);
+    setNotice(null);
+
+    setIsLoading(true);
+    try {
+      const res = await authService.resendMobileOtp(mobileNumber.trim());
+      setOtpCooldown(res.cooldownSeconds || 60);
+      setFailedAttempts(0);
+      setIsOtpBlocked(false);
+      setOtpDigits(['', '', '', '', '', '']);
+
+      setNotice(
+        res.message ||
+          (selectedLanguage === 'hi'
+            ? 'नया OTP सफलतापूर्वक भेजा गया।'
+            : selectedLanguage === 'hinglish'
+            ? 'Naya OTP successfully bhej diya gaya.'
+            : 'New OTP dispatched successfully.')
+      );
+
+      setTimeout(() => {
+        otpInputRefs.current[0]?.focus();
+      }, 100);
+    } catch (err: any) {
+      setError(err.message || 'OTP दोबारा भेजने में विफलता हुई।');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Change mobile number -> go back to step 1
+  const handleChangeMobileNumber = () => {
+    setMobileStep('input');
+    setOtpDigits(['', '', '', '', '', '']);
+    setError(null);
+    setNotice(null);
+    setFailedAttempts(0);
+    setIsOtpBlocked(false);
   };
 
   // ==========================================
@@ -117,16 +353,15 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthenticated }) => {
     if (!clientId) {
       setNotice(
         selectedLanguage === 'hi'
-          ? 'गूगल साइन-इन को सक्रिय करने के लिए सर्वर सेटिंग्स में GOOGLE_CLIENT_ID जोड़ें। या नीचे दिए गए ईमेल और पासवर्ड से सीधे लॉगिन / रजिस्टर करें — आपको तुरंत 5 फ्री क्रेडिट मिलेंगे!'
+          ? 'गूगल साइन-इन को सक्रिय करने के लिए GOOGLE_CLIENT_ID आवश्यक है। आप अपने मोबाइल नंबर और OTP से बिना किसी सेटअप के तुरंत लॉगिन कर सकते हैं — आपको 5 फ्री क्रेडिट मिलेंगे!'
           : selectedLanguage === 'hinglish'
-          ? 'Google Sign-In enable karne ke liye GOOGLE_CLIENT_ID configure karein. Ya neeche Email + Password se turant login karein — aapko turant 5 free credits milenge!'
-          : 'To enable Google Sign-In, please configure GOOGLE_CLIENT_ID in your environment variables, or sign in below with Email & Password (no setup required) to receive 5 free credits!'
+          ? 'Google Sign-In ke liye GOOGLE_CLIENT_ID chahiye. Aap Mobile Number + OTP se turant login karein — aapko 5 free credits milenge!'
+          : 'To enable Google Sign-In, configure GOOGLE_CLIENT_ID, or sign in right away with Mobile OTP to receive 5 free credits!'
       );
       return;
     }
 
     setIsLoading(true);
-
     try {
       if (typeof window !== 'undefined' && window.google?.accounts?.oauth2) {
         const tokenClient = window.google.accounts.oauth2.initTokenClient({
@@ -144,7 +379,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthenticated }) => {
                   accessToken: tokenResponse.access_token,
                 });
                 setSuccessAuthData(res);
-                setStep('success');
+                setScreenStep('success');
                 setTimeout(() => onAuthenticated(res), 1500);
               } catch (err: any) {
                 setError(err.message || 'Google authentication failed');
@@ -164,7 +399,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthenticated }) => {
       } else {
         const res = await authService.loginWithGoogle();
         setSuccessAuthData(res);
-        setStep('success');
+        setScreenStep('success');
         setTimeout(() => onAuthenticated(res), 1500);
       }
     } catch (err: any) {
@@ -176,7 +411,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthenticated }) => {
   // ==========================================
   // EMAIL + PASSWORD LOGIN / REGISTER FLOW
   // ==========================================
-  const handleAuthSubmit = async (e: React.FormEvent) => {
+  const handleEmailAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setNotice(null);
@@ -204,7 +439,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthenticated }) => {
       return;
     }
 
-    if (authMode === 'register' && !fullName.trim()) {
+    if (emailAuthMode === 'register' && !fullName.trim()) {
       setError(
         selectedLanguage === 'hi'
           ? 'कृपया अपना पूरा नाम दर्ज करें।'
@@ -217,19 +452,19 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthenticated }) => {
 
     setIsLoading(true);
     try {
-      if (authMode === 'register') {
+      if (emailAuthMode === 'register') {
         const res = await authService.register(fullName, cleanEmail, password, selectedLanguage);
         setSuccessAuthData(res);
-        setStep('success');
+        setScreenStep('success');
         setTimeout(() => onAuthenticated(res), 1500);
       } else {
         const res = await authService.login(cleanEmail, password);
         setSuccessAuthData(res);
-        setStep('success');
+        setScreenStep('success');
         setTimeout(() => onAuthenticated(res), 1200);
       }
     } catch (err: any) {
-      setError(err.message || 'Authentication failed. Please check your credentials.');
+      setError(err.message || 'प्रमाणीकरण विफल रहा। कृपया अपने क्रेडेंशियल जांचें।');
     } finally {
       setIsLoading(false);
     }
@@ -254,10 +489,10 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthenticated }) => {
       const res = await authService.requestPasswordReset(cleanEmail);
       if (res.devCode) {
         setDevResetCode(res.devCode);
-        setResetCode(res.devCode); // Auto-fill for seamless testing
+        setResetCode(res.devCode);
       }
       setNotice(res.message || 'Verification code sent to your email.');
-      setStep('forgot_confirm');
+      setScreenStep('forgot_confirm');
     } catch (err: any) {
       setError(err.message || 'Failed to send password reset code.');
     } finally {
@@ -285,8 +520,8 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthenticated }) => {
       const res = await authService.confirmPasswordReset(email.trim().toLowerCase(), resetCode.trim(), newPassword);
       setNotice(res.message || 'Password reset successfully! You can now log in.');
       setPassword(newPassword);
-      setAuthMode('login');
-      setStep('form');
+      setEmailAuthMode('login');
+      setScreenStep('form');
     } catch (err: any) {
       setError(err.message || 'Failed to update password. Please check the code.');
     } finally {
@@ -295,9 +530,105 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthenticated }) => {
   };
 
   // ==========================================
+  // LOGOUT HANDLER (FOR ACTIVE SESSION)
+  // ==========================================
+  const handleLogout = async () => {
+    setIsLoading(true);
+    try {
+      await authService.logout();
+      setExistingSession(null);
+      setScreenStep('form');
+      setNotice(
+        selectedLanguage === 'hi'
+          ? 'आप सफलतापूर्वक लॉग आउट हो गए हैं।'
+          : selectedLanguage === 'hinglish'
+          ? 'Aap successfully logout ho gaye hain.'
+          : 'You have been successfully logged out.'
+      );
+    } catch (err: any) {
+      setError('Logout failed');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ==========================================
+  // RENDER: EXISTING SESSION SCREEN
+  // ==========================================
+  if (screenStep === 'existing_session' && existingSession?.user) {
+    return (
+      <div className="min-h-screen bg-stone-100 flex flex-col justify-center items-center p-4 sm:p-6">
+        <div className="w-full max-w-md bg-white rounded-3xl border border-stone-200 shadow-xl overflow-hidden p-6 sm:p-8 text-center space-y-5 animate-in zoom-in-95 duration-200">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-amber-100 text-amber-700 shadow-xs mb-1">
+            <User className="w-7 h-7" />
+          </div>
+
+          <div className="space-y-1">
+            <h2 className="text-xl font-heading font-extrabold text-stone-900">
+              {selectedLanguage === 'hi'
+                ? 'सक्रिय सत्र पाया गया'
+                : selectedLanguage === 'hinglish'
+                ? 'Active Session Found'
+                : 'Welcome Back!'}
+            </h2>
+            <p className="text-xs text-stone-600">
+              {selectedLanguage === 'hi'
+                ? `आप ${existingSession.user.name || existingSession.user.mobile || existingSession.user.email} के रूप में लॉग इन हैं`
+                : `Logged in as ${existingSession.user.name || existingSession.user.mobile || existingSession.user.email}`}
+            </p>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-stone-50 border border-stone-200 text-left text-xs space-y-1">
+            <div className="flex justify-between text-stone-600">
+              <span>Account Type:</span>
+              <span className="font-semibold text-stone-800 capitalize">{existingSession.account?.tier || 'Free'} Plan</span>
+            </div>
+            <div className="flex justify-between text-stone-600">
+              <span>Available Credits:</span>
+              <span className="font-bold text-amber-700">{existingSession.account?.creditsBalance ?? 5} Credits</span>
+            </div>
+          </div>
+
+          <div className="space-y-2 pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                onAuthenticated({
+                  success: true,
+                  user: existingSession.user!,
+                  account: existingSession.account!,
+                  credits: {
+                    balance: existingSession.account?.creditsBalance ?? 5,
+                    freeChatMinutesRemaining: 5,
+                    freePhotosRemaining: 5,
+                  },
+                });
+              }}
+              className="w-full py-3 px-4 rounded-2xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-amber-600/20 flex items-center justify-center gap-2 cursor-pointer transition-all"
+            >
+              <span>{selectedLanguage === 'hi' ? 'वास्तु ऐप में आगे बढ़ें' : 'Continue to Vastu App'}</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={isLoading}
+              className="w-full py-2.5 px-4 rounded-2xl border border-stone-200 bg-white hover:bg-red-50 text-stone-600 hover:text-red-700 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>{selectedLanguage === 'hi' ? 'लॉग आउट करें (Logout)' : 'Sign Out / Switch Account'}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ==========================================
   // RENDER: SUCCESS SCREEN
   // ==========================================
-  if (step === 'success') {
+  if (screenStep === 'success') {
     return (
       <div className="min-h-screen bg-stone-100 flex flex-col justify-center items-center p-4 sm:p-6">
         <div className="w-full max-w-md bg-white rounded-3xl border border-stone-200 shadow-xl overflow-hidden p-8 text-center space-y-5 animate-in zoom-in-95 duration-300">
@@ -368,7 +699,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthenticated }) => {
   // ==========================================
   // RENDER: FORGOT PASSWORD CONFIRM SCREEN
   // ==========================================
-  if (step === 'forgot_confirm') {
+  if (screenStep === 'forgot_confirm') {
     return (
       <div className="min-h-screen bg-stone-100 flex flex-col justify-center items-center p-4 sm:p-6">
         <div className="w-full max-w-md bg-white rounded-3xl border border-stone-200 shadow-xl overflow-hidden p-6 sm:p-8 space-y-5 animate-in fade-in duration-200">
@@ -459,8 +790,8 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthenticated }) => {
             <button
               type="button"
               onClick={() => {
-                setStep('form');
-                setAuthMode('login');
+                setScreenStep('form');
+                setEmailAuthMode('login');
                 setError(null);
                 setNotice(null);
               }}
@@ -476,19 +807,19 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthenticated }) => {
   }
 
   // ==========================================
-  // RENDER: MAIN AUTH SCREEN (GOOGLE + EMAIL/PASSWORD)
+  // RENDER: MAIN AUTH SCREEN
   // ==========================================
   return (
-    <div className="min-h-screen bg-stone-100 flex flex-col justify-center items-center p-4 sm:p-6">
+    <div className="min-h-screen bg-stone-100 flex flex-col justify-center items-center p-3.5 sm:p-6">
       <div className="w-full max-w-md bg-white rounded-3xl border border-stone-200 shadow-xl overflow-hidden">
-        {/* Language Bar & Branding Header */}
-        <div className="bg-gradient-to-b from-amber-500/10 via-amber-500/5 to-transparent p-6 sm:p-7 text-center border-b border-stone-100 relative">
+        {/* Language Bar & Header Branding */}
+        <div className="bg-gradient-to-b from-amber-500/10 via-amber-500/5 to-transparent p-5 sm:p-6 text-center border-b border-stone-100 relative">
           {/* Language Selector Pills */}
-          <div className="flex items-center justify-center gap-1.5 mb-4">
+          <div className="flex items-center justify-center gap-1.5 mb-3.5">
             <button
               type="button"
               onClick={() => handleLanguageChange('hi')}
-              className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${
+              className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all cursor-pointer ${
                 selectedLanguage === 'hi'
                   ? 'bg-amber-600 text-white shadow-xs'
                   : 'bg-white/80 text-stone-600 hover:bg-white border border-stone-200'
@@ -499,7 +830,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthenticated }) => {
             <button
               type="button"
               onClick={() => handleLanguageChange('hinglish')}
-              className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${
+              className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all cursor-pointer ${
                 selectedLanguage === 'hinglish'
                   ? 'bg-amber-600 text-white shadow-xs'
                   : 'bg-white/80 text-stone-600 hover:bg-white border border-stone-200'
@@ -510,7 +841,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthenticated }) => {
             <button
               type="button"
               onClick={() => handleLanguageChange('en')}
-              className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${
+              className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all cursor-pointer ${
                 selectedLanguage === 'en'
                   ? 'bg-amber-600 text-white shadow-xs'
                   : 'bg-white/80 text-stone-600 hover:bg-white border border-stone-200'
@@ -520,26 +851,23 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthenticated }) => {
             </button>
           </div>
 
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-amber-600 text-white shadow-md shadow-amber-600/20 mb-3">
-            <Compass className="w-8 h-8 animate-spin-slow" />
+          <div className="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-amber-600 text-white shadow-md shadow-amber-600/20 mb-2.5">
+            <Compass className="w-7 h-7 sm:w-8 sm:h-8" />
           </div>
           <h1 className="text-2xl sm:text-3xl font-heading font-extrabold text-stone-900 tracking-tight">
-            VastuVision <span className="text-amber-600">AI</span>
+            Ghar Ghar Vastu <span className="text-amber-600">Go</span>
           </h1>
-          <p className="text-xs sm:text-sm text-stone-600 mt-1 font-medium">
-            Vedic Architecture & Spatial Energy Advisor
-          </p>
-          <p className="text-[11px] text-amber-800/80 font-medium mt-0.5">
+          <p className="text-xs sm:text-sm text-stone-600 mt-0.5 font-medium">
             {selectedLanguage === 'hi'
-              ? 'वास्तु एवं सकारात्मक ऊर्जा सलाहकार'
+              ? 'वैदिक वास्तु एवं सकारात्मक ऊर्जा विश्लेषण'
               : selectedLanguage === 'hinglish'
-              ? 'Vastu aur positive energy advisor'
-              : 'Vedic harmony for modern living'}
+              ? 'Vedic Vastu & Positive Energy Analysis'
+              : 'Vedic Architecture & Spatial Energy Advisor'}
           </p>
         </div>
 
         {/* Card Body */}
-        <div className="p-6 sm:p-8 space-y-5">
+        <div className="p-5 sm:p-7 space-y-4 sm:space-y-5">
           {/* Error Message */}
           {error && (
             <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-start gap-2.5 animate-in fade-in">
@@ -556,7 +884,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthenticated }) => {
             </div>
           )}
 
-          {/* Real Google Sign-In Button */}
+          {/* Google Sign-In Button */}
           <div className="space-y-2">
             <div ref={googleBtnRef} className="w-full min-h-[42px]">
               <button
@@ -589,225 +917,469 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthenticated }) => {
           </div>
 
           {/* Divider */}
-          <div className="relative py-1 flex items-center justify-center">
+          <div className="relative py-0.5 flex items-center justify-center">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-stone-200" />
             </div>
             <span className="relative px-3 bg-white text-[11px] text-stone-400 font-medium uppercase tracking-wider">
-              {selectedLanguage === 'hi' ? 'या ईमेल से' : selectedLanguage === 'hinglish' ? 'ya email se' : 'or with email'}
+              {selectedLanguage === 'hi' ? 'या' : 'or'}
             </span>
           </div>
 
-          {/* Mode Switch Tabs (Login / Register) */}
-          {authMode !== 'forgot' && (
-            <div className="flex border-b border-stone-200 p-1 bg-stone-50 rounded-2xl gap-1">
-              <button
-                type="button"
-                onClick={() => {
-                  setAuthMode('login');
-                  setError(null);
-                  setNotice(null);
-                }}
-                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
-                  authMode === 'login'
-                    ? 'bg-white text-stone-900 shadow-xs border border-stone-200/80'
-                    : 'text-stone-500 hover:text-stone-800'
-                }`}
-              >
-                {selectedLanguage === 'hi' ? 'लॉगिन' : 'Sign In'}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setAuthMode('register');
-                  setError(null);
-                  setNotice(null);
-                }}
-                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
-                  authMode === 'register'
-                    ? 'bg-white text-stone-900 shadow-xs border border-stone-200/80'
-                    : 'text-stone-500 hover:text-stone-800'
-                }`}
-              >
-                {selectedLanguage === 'hi' ? 'नया खाता बनाएं' : 'Create Account'}
-              </button>
+          {/* Primary Channel Switcher Tabs: Mobile OTP vs Email */}
+          <div className="flex p-1 bg-stone-100 rounded-2xl gap-1">
+            <button
+              type="button"
+              onClick={() => {
+                setAuthChannel('mobile');
+                setError(null);
+                setNotice(null);
+              }}
+              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                authChannel === 'mobile'
+                  ? 'bg-white text-stone-900 shadow-xs border border-stone-200/80'
+                  : 'text-stone-500 hover:text-stone-800'
+              }`}
+            >
+              <Smartphone className="w-3.5 h-3.5 text-amber-600" />
+              <span>{selectedLanguage === 'hi' ? 'मोबाइल OTP' : 'Mobile OTP'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAuthChannel('email');
+                setError(null);
+                setNotice(null);
+              }}
+              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                authChannel === 'email'
+                  ? 'bg-white text-stone-900 shadow-xs border border-stone-200/80'
+                  : 'text-stone-500 hover:text-stone-800'
+              }`}
+            >
+              <Mail className="w-3.5 h-3.5 text-stone-400" />
+              <span>{selectedLanguage === 'hi' ? 'ईमेल आईडी' : 'Email ID'}</span>
+            </button>
+          </div>
+
+          {/* ==========================================
+              CHANNEL 1: MOBILE OTP FLOW (DEFAULT)
+             ========================================== */}
+          {authChannel === 'mobile' && (
+            <div className="space-y-4 animate-in fade-in duration-200">
+              {/* STEP 1: MOBILE NUMBER ENTRY */}
+              {mobileStep === 'input' && (
+                <form onSubmit={handleSendMobileOtp} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-stone-700 mb-1.5">
+                      {selectedLanguage === 'hi'
+                        ? 'आपका नाम (वैकल्पिक / नए यूज़र के लिए)'
+                        : 'Your Name (Optional / for registration)'}
+                    </label>
+                    <div className="relative">
+                      <User className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        placeholder="e.g. Ramesh Kumar"
+                        value={mobileName}
+                        onChange={(e) => setMobileName(e.target.value)}
+                        className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-stone-200 bg-stone-50 focus:bg-white text-xs sm:text-sm text-stone-900 focus:outline-hidden focus:border-amber-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-bold text-stone-700">
+                        {selectedLanguage === 'hi' ? 'मोबाइल नंबर (10 अंक)' : 'Mobile Number (10 Digits)'}
+                      </label>
+                      <span className={`text-[11px] font-mono ${mobileNumber.length === 10 ? 'text-emerald-600 font-bold' : 'text-stone-400'}`}>
+                        {mobileNumber.length}/10 {mobileNumber.length === 10 && '✓'}
+                      </span>
+                    </div>
+                    <div className="flex rounded-xl border border-stone-200 bg-stone-50 focus-within:border-amber-500 focus-within:bg-white overflow-hidden transition-colors shadow-2xs">
+                      <div className="px-3 py-2.5 bg-stone-100/90 border-r border-stone-200 text-xs font-bold text-stone-700 flex items-center gap-1.5 select-none shrink-0">
+                        <span>🇮🇳</span>
+                        <span>+91</span>
+                      </div>
+                      <input
+                        type="tel"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        maxLength={10}
+                        required
+                        autoFocus
+                        placeholder="98765 43210"
+                        value={mobileNumber}
+                        onChange={handleMobileNumberChange}
+                        className="w-full px-3.5 py-2.5 text-sm sm:text-base font-medium tracking-wider text-stone-900 bg-transparent focus:outline-hidden"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Free Plan Callout */}
+                  <div className="p-3 rounded-2xl bg-amber-50/70 border border-amber-200/80 text-[11px] text-amber-900 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>
+                      {selectedLanguage === 'hi'
+                        ? 'नया यूज़र रजिस्ट्रेशन और लॉगिन दोनों इसी से होगा। 5 फ्री वास्तु क्रेडिट तुरंत मिलेंगे!'
+                        : 'Seamless login & instant registration. 5 Free Vastu Credits included!'}
+                    </span>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isLoading || mobileNumber.length !== 10}
+                    className="w-full py-3 px-4 rounded-2xl bg-amber-600 hover:bg-amber-700 active:scale-[0.99] text-white font-bold text-xs sm:text-sm shadow-md shadow-amber-600/20 flex items-center justify-center gap-2 disabled:opacity-50 transition-all cursor-pointer"
+                  >
+                    {isLoading ? (
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <span>
+                          {selectedLanguage === 'hi'
+                            ? 'OTP भेजें'
+                            : selectedLanguage === 'hinglish'
+                            ? 'OTP Bhejein'
+                            : 'Send OTP'}
+                        </span>
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
+
+                  <p className="text-center text-[11px] text-stone-400 flex items-center justify-center gap-1">
+                    <ShieldCheck className="w-3.5 h-3.5 text-stone-400" />
+                    <span>सुरक्षित प्रमाणीकरण • पासवर्ड याद रखने की जरूरत नहीं</span>
+                  </p>
+                </form>
+              )}
+
+              {/* STEP 2: OTP VERIFICATION SCREEN */}
+              {mobileStep === 'verify' && (
+                <form onSubmit={handleVerifyMobileOtp} className="space-y-4">
+                  <div className="p-3.5 rounded-2xl bg-stone-50 border border-stone-200 text-center space-y-1">
+                    <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-stone-800">
+                      <span>{displayMaskedMobile}</span>
+                      <button
+                        type="button"
+                        onClick={handleChangeMobileNumber}
+                        className="inline-flex items-center gap-0.5 text-amber-600 hover:text-amber-700 ml-1.5 text-[11px] font-semibold cursor-pointer underline"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                        <span>{selectedLanguage === 'hi' ? 'नंबर बदलें' : 'Change'}</span>
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-stone-500">
+                      {selectedLanguage === 'hi'
+                        ? 'पर 6-अंकों का सत्यापन कोड भेजा गया है।'
+                        : 'A 6-digit verification code was sent to your phone.'}
+                    </p>
+                  </div>
+
+                  {/* 6 Individual Digit Boxes */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-xs font-bold text-stone-700">
+                        {selectedLanguage === 'hi' ? '6-अंकों का OTP दर्ज करें' : 'Enter 6-Digit OTP'}
+                      </label>
+                      {failedAttempts > 0 && !isOtpBlocked && (
+                        <span className="text-[11px] text-amber-600 font-semibold">
+                          ⚠️ {3 - failedAttempts} कोशिशें शेष (Attempts left)
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between gap-1.5 sm:gap-2">
+                      {otpDigits.map((digit, idx) => (
+                        <input
+                          key={idx}
+                          ref={(el) => (otpInputRefs.current[idx] = el)}
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          maxLength={1}
+                          disabled={isOtpBlocked || isLoading}
+                          value={digit}
+                          onChange={(e) => handleOtpDigitChange(idx, e.target.value)}
+                          onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                          onPaste={idx === 0 ? handleOtpPaste : undefined}
+                          className={`w-11 sm:w-12 h-12 text-center text-xl sm:text-2xl font-mono font-bold rounded-xl border transition-all ${
+                            digit
+                              ? 'border-amber-500 bg-amber-50/40 text-stone-900'
+                              : 'border-stone-200 bg-stone-50 text-stone-900 focus:bg-white'
+                          } ${
+                            isOtpBlocked ? 'opacity-50 cursor-not-allowed bg-stone-100' : 'focus:outline-hidden focus:border-amber-500'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Action Button: Verify OTP */}
+                  <button
+                    type="submit"
+                    disabled={isLoading || isOtpBlocked || otpDigits.join('').length !== 6}
+                    className="w-full py-3 px-4 rounded-2xl bg-amber-600 hover:bg-amber-700 active:scale-[0.99] text-white font-bold text-xs sm:text-sm shadow-md shadow-amber-600/20 flex items-center justify-center gap-2 disabled:opacity-50 transition-all cursor-pointer"
+                  >
+                    {isLoading ? (
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <Check className="w-4 h-4" />
+                        <span>
+                          {selectedLanguage === 'hi'
+                            ? 'OTP सत्यापित करें और आगे बढ़ें'
+                            : selectedLanguage === 'hinglish'
+                            ? 'Verify Karein aur Login'
+                            : 'Verify & Continue'}
+                        </span>
+                      </>
+                    )}
+                  </button>
+
+                  {/* Resend OTP Section with 60-Second Countdown Timer */}
+                  <div className="pt-1 flex items-center justify-between text-xs">
+                    <button
+                      type="button"
+                      onClick={handleChangeMobileNumber}
+                      className="inline-flex items-center gap-1 text-stone-500 hover:text-stone-800 font-medium cursor-pointer"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                      <span>{selectedLanguage === 'hi' ? 'नंबर बदलें' : 'Back'}</span>
+                    </button>
+
+                    {otpCooldown > 0 ? (
+                      <span className="text-stone-400 font-medium text-[11px]">
+                        {selectedLanguage === 'hi'
+                          ? `पुनः OTP भेजें (${otpCooldown}s)`
+                          : `Resend OTP in ${otpCooldown}s`}
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleResendMobileOtp}
+                        disabled={isLoading}
+                        className="inline-flex items-center gap-1 text-amber-600 hover:text-amber-700 font-bold text-xs cursor-pointer hover:underline"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        <span>
+                          {selectedLanguage === 'hi'
+                            ? 'पुनः OTP भेजें (Resend)'
+                            : 'Resend OTP'}
+                        </span>
+                      </button>
+                    )}
+                  </div>
+                </form>
+              )}
             </div>
           )}
 
           {/* ==========================================
-              SUB-VIEW 1 & 2: LOGIN OR REGISTER FORM
+              CHANNEL 2: EMAIL & PASSWORD FLOW
              ========================================== */}
-          {authMode !== 'forgot' ? (
-            <form onSubmit={handleAuthSubmit} className="space-y-4">
-              {authMode === 'register' && (
-                <div>
-                  <label className="block text-xs font-bold text-stone-700 mb-1.5">
-                    {selectedLanguage === 'hi' ? 'पूरा नाम' : 'Full Name'}
-                  </label>
-                  <div className="relative">
-                    <User className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Aarav Sharma"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-stone-200 bg-stone-50 focus:bg-white text-xs sm:text-sm text-stone-900 focus:outline-hidden focus:border-amber-500 transition-colors"
-                    />
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-xs font-bold text-stone-700 mb-1.5">
-                  {selectedLanguage === 'hi' ? 'ईमेल आईडी' : 'Email Address'}
-                </label>
-                <div className="relative">
-                  <Mail className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="email"
-                    required
-                    placeholder="name@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-stone-200 bg-stone-50 focus:bg-white text-xs sm:text-sm text-stone-900 focus:outline-hidden focus:border-amber-500 transition-colors"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-stone-700 mb-1.5">
-                  {selectedLanguage === 'hi' ? 'पासवर्ड' : 'Password'}
-                </label>
-                <div className="relative">
-                  <Lock className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    minLength={6}
-                    placeholder="At least 6 characters"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-stone-200 bg-stone-50 focus:bg-white text-xs sm:text-sm text-stone-900 focus:outline-hidden focus:border-amber-500 transition-colors"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 p-1 cursor-pointer"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Free Plan Welcome Callout */}
-              <div className="p-3 rounded-2xl bg-amber-50/70 border border-amber-200/80 text-[11px] text-amber-900 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
-                <span>
-                  <strong>FREE Welcome Pack:</strong> 5 AI Consultations & 5 Photo Scans included with every new account.
-                </span>
-              </div>
-
-              {authMode === 'login' && (
-                <div className="text-right">
+          {authChannel === 'email' && (
+            <div className="space-y-4 animate-in fade-in duration-200">
+              {/* Login / Register Toggle Tabs */}
+              {emailAuthMode !== 'forgot' && (
+                <div className="flex border-b border-stone-200 p-1 bg-stone-50 rounded-2xl gap-1">
                   <button
                     type="button"
                     onClick={() => {
-                      setAuthMode('forgot');
+                      setEmailAuthMode('login');
                       setError(null);
                       setNotice(null);
                     }}
-                    className="text-[11px] font-bold text-amber-700 hover:text-amber-800 underline cursor-pointer"
+                    className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      emailAuthMode === 'login'
+                        ? 'bg-white text-stone-900 shadow-xs border border-stone-200/80'
+                        : 'text-stone-500 hover:text-stone-800'
+                    }`}
                   >
-                    {selectedLanguage === 'hi'
-                      ? 'पासवर्ड भूल गए?'
-                      : selectedLanguage === 'hinglish'
-                      ? 'Password bhool gaye?'
-                      : 'Forgot password?'}
+                    {selectedLanguage === 'hi' ? 'लॉगिन' : 'Sign In'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEmailAuthMode('register');
+                      setError(null);
+                      setNotice(null);
+                    }}
+                    className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      emailAuthMode === 'register'
+                        ? 'bg-white text-stone-900 shadow-xs border border-stone-200/80'
+                        : 'text-stone-500 hover:text-stone-800'
+                    }`}
+                  >
+                    {selectedLanguage === 'hi' ? 'नया खाता बनाएं' : 'Create Account'}
                   </button>
                 </div>
               )}
 
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full py-3 px-4 rounded-2xl bg-amber-600 hover:bg-amber-700 active:scale-[0.99] text-white font-bold text-xs sm:text-sm shadow-md shadow-amber-600/20 flex items-center justify-center gap-2 disabled:opacity-50 transition-all cursor-pointer"
-              >
-                {isLoading ? (
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <span>
-                    {authMode === 'register'
-                      ? selectedLanguage === 'hi'
-                        ? 'निःशुल्क खाता बनाएं'
-                        : 'Create Free Account'
-                      : selectedLanguage === 'hi'
-                      ? 'साइन इन करें'
-                      : 'Sign In to VastuVision'}
-                  </span>
-                )}
-              </button>
-            </form>
-          ) : (
-            /* ==========================================
-               SUB-VIEW 3: FORGOT PASSWORD REQUEST FORM
-               ========================================== */
-            <form onSubmit={handleRequestPasswordReset} className="space-y-4">
-              <div className="space-y-1 text-left">
-                <h3 className="text-sm font-bold text-stone-800">
-                  {selectedLanguage === 'hi' ? 'पासवर्ड रिकवरी' : 'Password Recovery'}
-                </h3>
-                <p className="text-[11px] text-stone-500">
-                  {selectedLanguage === 'hi'
-                    ? 'अपना पंजीकृत ईमेल दर्ज करें। हम आपको एक 6-अंकों का रीसेट कोड प्रदान करेंगे।'
-                    : 'Enter your registered email address to receive a 6-digit password reset code.'}
-                </p>
-              </div>
+              {emailAuthMode !== 'forgot' ? (
+                <form onSubmit={handleEmailAuthSubmit} className="space-y-3.5">
+                  {emailAuthMode === 'register' && (
+                    <div>
+                      <label className="block text-xs font-bold text-stone-700 mb-1.5">
+                        {selectedLanguage === 'hi' ? 'पूरा नाम' : 'Full Name'}
+                      </label>
+                      <div className="relative">
+                        <User className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. Aarav Sharma"
+                          value={fullName}
+                          onChange={(e) => setFullName(e.target.value)}
+                          className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-stone-200 bg-stone-50 focus:bg-white text-xs sm:text-sm text-stone-900 focus:outline-hidden focus:border-amber-500 transition-colors"
+                        />
+                      </div>
+                    </div>
+                  )}
 
-              <div>
-                <label className="block text-xs font-bold text-stone-700 mb-1.5">
-                  {selectedLanguage === 'hi' ? 'ईमेल आईडी' : 'Email Address'}
-                </label>
-                <div className="relative">
-                  <Mail className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="email"
-                    required
-                    placeholder="name@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-stone-200 bg-stone-50 focus:bg-white text-xs sm:text-sm text-stone-900 focus:outline-hidden focus:border-amber-500 transition-colors"
-                  />
-                </div>
-              </div>
+                  <div>
+                    <label className="block text-xs font-bold text-stone-700 mb-1.5">
+                      {selectedLanguage === 'hi' ? 'ईमेल आईडी' : 'Email Address'}
+                    </label>
+                    <div className="relative">
+                      <Mail className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="email"
+                        required
+                        placeholder="name@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-stone-200 bg-stone-50 focus:bg-white text-xs sm:text-sm text-stone-900 focus:outline-hidden focus:border-amber-500 transition-colors"
+                      />
+                    </div>
+                  </div>
 
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full py-3 px-4 rounded-2xl bg-amber-600 hover:bg-amber-700 active:scale-[0.99] text-white font-bold text-xs sm:text-sm shadow-md shadow-amber-600/20 flex items-center justify-center gap-2 disabled:opacity-50 transition-all cursor-pointer"
-              >
-                {isLoading ? (
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <span>Send Reset Code</span>
-                )}
-              </button>
+                  <div>
+                    <label className="block text-xs font-bold text-stone-700 mb-1.5">
+                      {selectedLanguage === 'hi' ? 'पासवर्ड' : 'Password'}
+                    </label>
+                    <div className="relative">
+                      <Lock className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        required
+                        minLength={6}
+                        placeholder="At least 6 characters"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-stone-200 bg-stone-50 focus:bg-white text-xs sm:text-sm text-stone-900 focus:outline-hidden focus:border-amber-500 transition-colors"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 p-1 cursor-pointer"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
 
-              <div className="text-center pt-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthMode('login');
-                    setError(null);
-                    setNotice(null);
-                  }}
-                  className="inline-flex items-center gap-1.5 text-xs text-stone-500 hover:text-stone-800 font-medium cursor-pointer"
-                >
-                  <ArrowLeft className="w-3.5 h-3.5" />
-                  <span>Back to Sign In</span>
-                </button>
-              </div>
-            </form>
+                  {emailAuthMode === 'login' && (
+                    <div className="text-right">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEmailAuthMode('forgot');
+                          setError(null);
+                          setNotice(null);
+                        }}
+                        className="text-[11px] font-bold text-amber-700 hover:text-amber-800 underline cursor-pointer"
+                      >
+                        {selectedLanguage === 'hi'
+                          ? 'पासवर्ड भूल गए?'
+                          : selectedLanguage === 'hinglish'
+                          ? 'Password bhool gaye?'
+                          : 'Forgot password?'}
+                      </button>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full py-3 px-4 rounded-2xl bg-amber-600 hover:bg-amber-700 active:scale-[0.99] text-white font-bold text-xs sm:text-sm shadow-md shadow-amber-600/20 flex items-center justify-center gap-2 disabled:opacity-50 transition-all cursor-pointer"
+                  >
+                    {isLoading ? (
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <span>
+                        {emailAuthMode === 'register'
+                          ? selectedLanguage === 'hi'
+                            ? 'निःशुल्क खाता बनाएं'
+                            : 'Create Free Account'
+                          : selectedLanguage === 'hi'
+                          ? 'साइन इन करें'
+                          : 'Sign In to VastuVision'}
+                      </span>
+                    )}
+                  </button>
+                </form>
+              ) : (
+                /* Forgot Password Request Form */
+                <form onSubmit={handleRequestPasswordReset} className="space-y-3.5">
+                  <div className="space-y-1 text-left">
+                    <h3 className="text-sm font-bold text-stone-800">
+                      {selectedLanguage === 'hi' ? 'पासवर्ड रिकवरी' : 'Password Recovery'}
+                    </h3>
+                    <p className="text-[11px] text-stone-500">
+                      {selectedLanguage === 'hi'
+                        ? 'अपना पंजीकृत ईमेल दर्ज करें। हम आपको एक 6-अंकों का रीसेट कोड भेजेंगे।'
+                        : 'Enter your registered email address to receive a 6-digit password reset code.'}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-stone-700 mb-1.5">
+                      {selectedLanguage === 'hi' ? 'ईमेल आईडी' : 'Email Address'}
+                    </label>
+                    <div className="relative">
+                      <Mail className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="email"
+                        required
+                        placeholder="name@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-stone-200 bg-stone-50 focus:bg-white text-xs sm:text-sm text-stone-900 focus:outline-hidden focus:border-amber-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full py-3 px-4 rounded-2xl bg-amber-600 hover:bg-amber-700 active:scale-[0.99] text-white font-bold text-xs sm:text-sm shadow-md shadow-amber-600/20 flex items-center justify-center gap-2 disabled:opacity-50 transition-all cursor-pointer"
+                  >
+                    {isLoading ? (
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <span>Send Reset Code</span>
+                    )}
+                  </button>
+
+                  <div className="text-center pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEmailAuthMode('login');
+                        setError(null);
+                        setNotice(null);
+                      }}
+                      className="inline-flex items-center gap-1.5 text-xs text-stone-500 hover:text-stone-800 font-medium cursor-pointer"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                      <span>Back to Sign In</span>
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
           )}
         </div>
 

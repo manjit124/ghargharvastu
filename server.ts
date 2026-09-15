@@ -42,8 +42,10 @@ import {
   sendEmailOtp,
   verifyEmailOtp,
   resendEmailOtp,
+  getApitxtStatus,
   getMsg91Status,
   getEmailConfigStatus,
+  formatMobileNumber,
   formatMobileForMsg91,
 } from "./server/services/otpService";
 
@@ -335,10 +337,10 @@ async function startServer() {
     });
   });
 
-  // Auth Configuration Status (Google, MSG91, Email)
+  // Auth Configuration Status (Google, APITxT Mobile OTP, Email)
   app.get("/api/auth/config", (_req, res) => {
     const googleClientId = process.env.GOOGLE_CLIENT_ID || "";
-    const msg91Status = getMsg91Status();
+    const apitxtStatus = getApitxtStatus();
     const emailStatus = getEmailConfigStatus();
 
     res.json({
@@ -346,11 +348,16 @@ async function startServer() {
         configured: !!googleClientId,
         clientId: googleClientId,
       },
-      msg91: {
-        configured: msg91Status.configured,
-        hasAuthKey: msg91Status.hasAuthKey,
-        hasTemplateId: msg91Status.hasTemplateId,
-        hasSenderId: msg91Status.hasSenderId,
+      mobile: {
+        configured: apitxtStatus.configured,
+        hasApiKey: apitxtStatus.hasApiKey,
+        provider: 'apitxt',
+        channel: apitxtStatus.channel,
+      },
+      apitxt: {
+        configured: apitxtStatus.configured,
+        hasApiKey: apitxtStatus.hasApiKey,
+        channel: apitxtStatus.channel,
       },
       email: {
         configured: emailStatus.configured,
@@ -515,7 +522,7 @@ async function startServer() {
         const isNotConfigured =
           result.error?.includes("not configured") ||
           result.error?.includes("missing") ||
-          result.error?.includes("DLT Template ID");
+          result.error?.includes("कॉन्फ़िगर");
         return res.status(isNotConfigured ? 503 : 400).json({
           success: false,
           error: result.error,
@@ -525,8 +532,8 @@ async function startServer() {
       res.json({
         success: true,
         displayMobile: result.displayMobile,
-        cooldownSeconds: result.cooldownSeconds,
-        message: `OTP sent successfully to ${result.displayMobile || "your mobile number"}.`,
+        cooldownSeconds: result.cooldownSeconds || 60,
+        message: result.message || `OTP सफलतापूर्वक ${result.displayMobile || "आपके मोबाइल"} पर SMS द्वारा भेजा गया।`,
       });
     } catch (err: any) {
       console.error("[OTP Mobile Send Error]:", err);
@@ -552,6 +559,7 @@ async function startServer() {
         return res.status(400).json({
           success: false,
           error: verifyResult.error || "Invalid or expired OTP code.",
+          attemptsRemaining: verifyResult.attemptsRemaining,
         });
       }
 
@@ -632,7 +640,7 @@ async function startServer() {
         const isNotConfigured =
           result.error?.includes("not configured") ||
           result.error?.includes("missing") ||
-          result.error?.includes("DLT Template ID");
+          result.error?.includes("कॉन्फ़िगर");
         return res.status(isNotConfigured ? 503 : 400).json({
           success: false,
           error: result.error,
@@ -641,8 +649,8 @@ async function startServer() {
       }
       res.json({
         success: true,
-        cooldownSeconds: result.cooldownSeconds,
-        message: "New OTP dispatched successfully.",
+        cooldownSeconds: result.cooldownSeconds || 60,
+        message: result.message || "नया OTP सफलतापूर्वक SMS द्वारा भेज दिया गया है।",
       });
     } catch (err: any) {
       console.error("[OTP Mobile Resend Error]:", err);

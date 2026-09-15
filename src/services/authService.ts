@@ -239,6 +239,21 @@ class AuthService {
 
   public async getConfig(): Promise<{
     google: { configured: boolean; clientId: string };
+    mobile?: {
+      configured: boolean;
+      hasApiKey?: boolean;
+      provider?: string;
+      channel?: string;
+    };
+    apitxt?: {
+      configured: boolean;
+      hasApiKey: boolean;
+      channel?: string;
+    };
+    email?: {
+      configured: boolean;
+      provider: string | null;
+    };
   }> {
     try {
       const res = await fetch('/api/auth/config');
@@ -294,7 +309,12 @@ class AuthService {
   public async sendMobileOtp(
     mobile: string,
     name?: string
-  ): Promise<{ success: boolean; displayMobile?: string; cooldownSeconds?: number; message?: string }> {
+  ): Promise<{
+    success: boolean;
+    displayMobile?: string;
+    cooldownSeconds?: number;
+    message?: string;
+  }> {
     const res = await fetch('/api/auth/otp/mobile/send', {
       method: 'POST',
       credentials: 'include',
@@ -314,7 +334,7 @@ class AuthService {
     otp: string,
     name?: string,
     preferredLanguage: 'hi' | 'hinglish' | 'en' = 'hi'
-  ): Promise<AuthSuccessResponse> {
+  ): Promise<AuthSuccessResponse & { attemptsRemaining?: number }> {
     const res = await fetch('/api/auth/otp/mobile/verify', {
       method: 'POST',
       credentials: 'include',
@@ -324,7 +344,9 @@ class AuthService {
 
     const data = await parseResponseJson<any>(res, 'Failed to verify mobile OTP.');
     if (!res.ok || !data.success) {
-      throw new Error(data.error || 'Failed to verify mobile OTP.');
+      const err = new Error(data.error || 'Failed to verify mobile OTP.') as any;
+      err.attemptsRemaining = data.attemptsRemaining;
+      throw err;
     }
 
     if (data.token) {
@@ -346,7 +368,11 @@ class AuthService {
 
   public async resendMobileOtp(
     mobile: string
-  ): Promise<{ success: boolean; cooldownSeconds?: number; message?: string }> {
+  ): Promise<{
+    success: boolean;
+    cooldownSeconds?: number;
+    message?: string;
+  }> {
     const res = await fetch('/api/auth/otp/mobile/resend', {
       method: 'POST',
       credentials: 'include',

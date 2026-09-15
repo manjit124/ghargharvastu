@@ -42,9 +42,9 @@ setInterval(() => {
 }, 2 * 60 * 1000);
 
 /**
- * Format and validate mobile numbers for Indian (+91) and international use with MSG91
+ * Format and validate mobile numbers for Indian (+91) and international use
  */
-export function formatMobileForMsg91(rawMobile: string): {
+export function formatMobileNumber(rawMobile: string): {
   formatted: string;
   isValid: boolean;
   display: string;
@@ -71,6 +71,9 @@ export function formatMobileForMsg91(rawMobile: string): {
     display,
   };
 }
+
+// Backwards compatibility alias
+export const formatMobileForMsg91 = formatMobileNumber;
 
 /**
  * Hash an OTP using HMAC-SHA256 for secure verification
@@ -142,82 +145,96 @@ function checkIdentifierRateLimit(identifier: string): {
 }
 
 // ============================================================================
-// MOBILE OTP VIA MSG91
+// MOBILE OTP VIA APITXT (apitxt.com - REAL SMS GATEWAY)
 // ============================================================================
 
-export interface Msg91ConfigStatus {
+export interface ApitxtConfigStatus {
   configured: boolean;
-  hasAuthKey: boolean;
-  hasTemplateId: boolean;
-  hasWidgetId: boolean;
-  hasSenderId: boolean;
-  authKeyName?: string;
+  hasApiKey: boolean;
+  provider: 'apitxt';
+  channel: string;
+  senderId?: string | null;
 }
 
-export function getMsg91Config(): {
-  authKey: string | null;
-  templateId: string | null;
-  widgetId: string | null;
+export function getApitxtConfig(): {
+  apiKey: string | null;
+  channel: string;
   senderId: string | null;
+  otpExpiryMinutes: number;
 } {
-  const authKey =
-    process.env.MSG91_AUTH_KEY ||
-    process.env.MSG91_KEY ||
-    process.env.AUTH_KEY ||
+  const apiKey =
+    process.env.APITXT_API_KEY ||
+    process.env.APITXT_AUTHKEY ||
+    process.env.APITXT_KEY ||
+    process.env.MSG91_AUTHKEY ||
     null;
 
-  const templateId =
-    process.env.MSG91_TEMPLATE_ID ||
-    process.env.MSG91_OTP_TEMPLATE_ID ||
-    process.env.MSG91_FLOW_ID ||
-    null;
+  const channel = process.env.APITXT_CHANNEL || 'sms';
+  const senderId = process.env.APITXT_SENDER_ID || null;
 
-  const widgetId = process.env.MSG91_WIDGET_ID || null;
-  const senderId = process.env.MSG91_SENDER_ID || null;
+  let otpExpiryMinutes = 5;
+  if (process.env.OTP_EXPIRY_SECONDS) {
+    const rawVal = Number(process.env.OTP_EXPIRY_SECONDS);
+    if (!isNaN(rawVal) && rawVal > 0) {
+      otpExpiryMinutes = Math.max(1, Math.round(rawVal / 60));
+    }
+  }
 
-  return { authKey, templateId, widgetId, senderId };
+  return { apiKey, channel, senderId, otpExpiryMinutes };
 }
 
-export function getMsg91Status(): Msg91ConfigStatus {
-  const config = getMsg91Config();
-  const configured = Boolean(config.authKey && (config.templateId || config.widgetId));
+export function getApitxtStatus(): ApitxtConfigStatus {
+  const config = getApitxtConfig();
   return {
-    configured,
-    hasAuthKey: !!config.authKey,
-    hasTemplateId: !!config.templateId,
-    hasWidgetId: !!config.widgetId,
-    hasSenderId: !!config.senderId,
-    authKeyName: process.env.MSG91_AUTH_KEY
-      ? 'MSG91_AUTH_KEY'
-      : process.env.MSG91_KEY
-      ? 'MSG91_KEY'
-      : process.env.AUTH_KEY
-      ? 'AUTH_KEY'
-      : undefined,
+    configured: Boolean(config.apiKey),
+    hasApiKey: Boolean(config.apiKey),
+    provider: 'apitxt',
+    channel: config.channel,
+    senderId: config.senderId,
+  };
+}
+
+// Backwards compatibility for previous MSG91 status callers
+export function getMsg91Status() {
+  const status = getApitxtStatus();
+  return {
+    configured: status.configured,
+    hasAuthKey: status.hasApiKey,
+    hasTemplateId: false,
+    hasWidgetId: false,
+    hasSenderId: Boolean(status.senderId),
+    testMode: false,
+    provider: 'apitxt',
   };
 }
 
 /**
- * Send real Mobile OTP using MSG91
+ * Send real Mobile OTP using APITxT (https://apitxt.com/api/sendOTP)
  */
 export async function sendMobileOtp(
   rawMobile: string,
   clientIp: string
-): Promise<{ success: boolean; error?: string; cooldownSeconds?: number; displayMobile?: string }> {
-  const { formatted, isValid, display } = formatMobileForMsg91(rawMobile);
+): Promise<{
+  success: boolean;
+  error?: string;
+  cooldownSeconds?: number;
+  displayMobile?: string;
+  message?: string;
+}> {
+  const { formatted, isValid, display } = formatMobileNumber(rawMobile);
   if (!isValid) {
     return {
       success: false,
-      error: 'Please enter a valid 10-digit Indian mobile number or international phone number.',
+      error: 'कृपया 10 अंकों का मान्य भारतीय मोबाइल नंबर दर्ज करें (+91)।',
     };
   }
 
-  // Check IP rate limit
+  // Check IP rate limit (15 requests per hour per IP)
   const ipCheck = checkIpRateLimit(clientIp);
   if (!ipCheck.allowed) {
     return {
       success: false,
-      error: `Too many OTP requests from your network. Please try again in ${Math.ceil((ipCheck.waitSeconds || 60) / 60)} minutes.`,
+      error: `आपके नेटवर्क से बहुत अधिक OTP अनुरोध भेजे गए हैं। कृपया ${Math.ceil((ipCheck.waitSeconds || 60) / 60)} मिनट बाद पुनः प्रयास करें।`,
     };
   }
 
@@ -231,103 +248,77 @@ export async function sendMobileOtp(
     };
   }
 
-  const { authKey, templateId, widgetId, senderId } = getMsg91Config();
+  const { apiKey, channel, otpExpiryMinutes } = getApitxtConfig();
 
-  if (!authKey) {
+  if (!apiKey) {
     return {
       success: false,
-      error:
-        'Mobile verification service is not configured yet. MSG91_AUTH_KEY is required in server environment secrets.',
+      error: 'APITxT सेवा अभी कॉन्फ़िगर नहीं है। कृपया सर्वर में APITXT_API_KEY जोड़ें।',
     };
   }
 
-  // Under TRAI DLT regulations in India, telecom operators reject SMS dispatched without an approved DLT Template ID
-  if (!templateId && !widgetId) {
-    return {
-      success: false,
-      error:
-        'MSG91_TEMPLATE_ID is missing. TRAI DLT regulations in India require an approved DLT Template ID mapped to MSG91 to deliver SMS OTP to mobile numbers. Please add MSG91_TEMPLATE_ID (or MSG91_WIDGET_ID) in AI Studio Secrets.',
-    };
-  }
+  // Generate real cryptographically secure 6-digit OTP code (never hardcoded or exposed)
+  const otpCode = crypto.randomInt(100000, 1000000).toString();
 
   try {
-    let reqId: string | undefined;
-
-    if (widgetId) {
-      // MSG91 OTP Widget API
-      const widgetUrl = 'https://api.msg91.com/api/v5/widget/sendOtp';
-      const response = await fetch(widgetUrl, {
-        method: 'POST',
-        headers: {
-          authkey: authKey,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          widgetId,
-          identifier: formatted,
-          otp_length: 6,
-          otp_expiry: 5,
-        }),
-      });
-
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok || data.type === 'error' || data.status === 'fail' || data.hasError) {
-        const errMsg = data.message || data.error || 'Failed to send SMS OTP via MSG91 widget.';
-        console.error('[MSG91 Widget Error]', { status: response.status, data });
-        return { success: false, error: errMsg };
-      }
-      reqId = data.reqId || data.request_id;
-      console.log('[MSG91 Widget Accepted]', {
-        reqId,
-        mobileMasked: formatted.slice(0, 4) + '****' + formatted.slice(-2),
-      });
-    } else {
-      // MSG91 Standard v5 OTP API
-      const params = new URLSearchParams({
-        template_id: templateId!,
+    const response = await fetch('https://apitxt.com/api/sendOTP', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        authkey: apiKey,
         mobile: formatted,
-        authkey: authKey,
-        otp_length: '6',
-        otp_expiry: '5', // 5 minutes
-      });
-      if (senderId) {
-        params.append('sender', senderId);
-      }
+        otp: otpCode,
+        channel: channel || 'sms',
+      }),
+    });
 
-      const url = `https://control.msg91.com/api/v5/otp?${params.toString()}`;
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          authkey: authKey,
-        },
-        body: JSON.stringify({}),
-      });
+    const data = await response.json().catch(() => ({}));
 
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok || data.type === 'error' || data.status === 'fail' || data.hasError) {
-        const errMsg = data.message || data.error || 'Failed to send SMS OTP via MSG91.';
-        console.error('[MSG91 Send Rejection]', { status: response.status, data });
-        return { success: false, error: errMsg };
-      }
-      reqId = data.request_id || data.reqId;
-      console.log('[MSG91 OTP Dispatched]', {
-        requestId: reqId,
-        type: data.type,
-        mobileMasked: formatted.slice(0, 4) + '****' + formatted.slice(-2),
-      });
+    // Check for APITxT rate limiting (e.g. 15s restriction per number)
+    if (response.status === 429 || data.code === 429) {
+      return {
+        success: false,
+        cooldownSeconds: 15,
+        error: 'कृपया इस मोबाइल नंबर पर पुनः OTP अनुरोध करने से पहले 15 सेकंड प्रतीक्षा करें।',
+      };
     }
 
-    // Update or create active OTP record
+    const isSuccess = response.ok && (data.status === 'success' || data.type === 'success');
+
+    if (!isSuccess) {
+      console.error('[APITxT Send Rejection]', { status: response.status, data });
+      const errMsg =
+        data.message ||
+        data.error ||
+        'APITxT SMS गेटवे से SMS भेजने में विफलता हुई। कृपया APITxT बैलेंस व सेटिंग्स जाँचें।';
+      return {
+        success: false,
+        error: errMsg,
+      };
+    }
+
+    const reqId = data.data?.request_id || data.request_id;
+    console.log('[APITxT SMS Dispatched]', {
+      requestId: reqId,
+      mobileMasked: formatted.slice(0, 4) + '****' + formatted.slice(-2),
+      status: data.status,
+    });
+
+    // Store HMAC-SHA256 hash in memory registry (NEVER plain text OTP!)
     const now = Date.now();
     const existing = otpStore.get(formatted);
+    const hashed = hashOtp(otpCode);
+
     otpStore.set(formatted, {
       identifier: formatted,
       type: 'mobile',
+      hash: hashed,
       reqId,
-      expiresAt: now + 5 * 60 * 1000, // 5 minutes
+      expiresAt: now + otpExpiryMinutes * 60 * 1000,
       attempts: 0,
-      maxAttempts: 5,
+      maxAttempts: 3,
       lastSentAt: now,
       sendCount: (existing?.sendCount || 0) + 1,
       firstSentInWindow: existing?.firstSentInWindow || now,
@@ -337,38 +328,44 @@ export async function sendMobileOtp(
       success: true,
       displayMobile: display,
       cooldownSeconds: 60,
+      message: `OTP सफलतापूर्वक आपके मोबाइल नंबर ${display} पर SMS द्वारा भेज दिया गया है।`,
     };
   } catch (err: any) {
-    console.error('[MSG91] Error sending SMS OTP:', err);
+    console.error('[APITxT Network Error]:', err);
     return {
       success: false,
-      error: 'Network error communicating with MSG91 SMS gateway. Please try again.',
+      error: 'APITxT SMS गेटवे के साथ नेटवर्क समस्या हुई। कृपया पुनः प्रयास करें।',
     };
   }
 }
 
 /**
- * Verify Mobile OTP with MSG91
+ * Verify Mobile OTP and enforce 3-attempts limit
  */
 export async function verifyMobileOtp(
   rawMobile: string,
   otpCode: string
-): Promise<{ success: boolean; error?: string; formattedMobile?: string }> {
-  const { formatted, isValid } = formatMobileForMsg91(rawMobile);
+): Promise<{
+  success: boolean;
+  error?: string;
+  formattedMobile?: string;
+  attemptsRemaining?: number;
+}> {
+  const { formatted, isValid } = formatMobileNumber(rawMobile);
   if (!isValid) {
-    return { success: false, error: 'Invalid mobile number format.' };
+    return { success: false, error: 'अमान्य मोबाइल नंबर प्रारूप।' };
   }
 
   const cleanOtp = otpCode.trim();
   if (!/^\d{6}$/.test(cleanOtp)) {
-    return { success: false, error: 'Please enter a valid 6-digit OTP.' };
+    return { success: false, error: 'कृपया 6 अंकों का मान्य OTP कोड दर्ज करें।' };
   }
 
   const record = otpStore.get(formatted);
-  if (!record) {
+  if (!record || record.type !== 'mobile' || !record.hash) {
     return {
       success: false,
-      error: 'OTP expired or not found. Please request a new OTP.',
+      error: 'OTP की समय सीमा समाप्त हो गई है या अमान्य है। कृपया नया OTP मांगें।',
     };
   }
 
@@ -377,7 +374,7 @@ export async function verifyMobileOtp(
     otpStore.delete(formatted);
     return {
       success: false,
-      error: 'OTP expired. Please request a new OTP.',
+      error: 'OTP की समय सीमा समाप्त हो गई है (Expired)। कृपया नया OTP मांगें।',
     };
   }
 
@@ -385,97 +382,63 @@ export async function verifyMobileOtp(
     otpStore.delete(formatted);
     return {
       success: false,
-      error: 'Too many incorrect attempts. Please request a new OTP.',
+      error: 'अधिकतम 3 गलत कोशिशें! सुरक्षा कारणों से यह OTP रद्द कर दिया गया है। कृपया नया OTP मांगें।',
+      attemptsRemaining: 0,
     };
   }
 
   record.attempts++;
 
-  const { authKey, widgetId } = getMsg91Config();
-  if (!authKey) {
-    return {
-      success: false,
-      error: 'MSG91 service configuration missing. Please set MSG91_AUTH_KEY.',
-    };
+  // Timing-safe HMAC-SHA256 comparison to prevent side-channel timing attacks
+  const inputHash = hashOtp(cleanOtp);
+  let isMatch = false;
+  try {
+    const bufInput = Buffer.from(inputHash, 'hex');
+    const bufStored = Buffer.from(record.hash, 'hex');
+    if (bufInput.length === bufStored.length) {
+      isMatch = crypto.timingSafeEqual(bufInput, bufStored);
+    }
+  } catch {
+    isMatch = false;
   }
 
-  try {
-    if (widgetId && record.reqId) {
-      // MSG91 Widget verification
-      const verifyUrl = 'https://api.msg91.com/api/v5/widget/verifyOtp';
-      const response = await fetch(verifyUrl, {
-        method: 'POST',
-        headers: {
-          authkey: authKey,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          widgetId,
-          reqId: record.reqId,
-          otp: cleanOtp,
-        }),
-      });
-
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok || data.type === 'error' || data.message?.toLowerCase().includes('fail')) {
-        return {
-          success: false,
-          error: data.message || 'Incorrect OTP. Please try again.',
-        };
-      }
-    } else {
-      // MSG91 Standard v5 OTP verification
-      const verifyUrl = `https://control.msg91.com/api/v5/otp/verify?otp=${encodeURIComponent(cleanOtp)}&mobile=${formatted}&authkey=${encodeURIComponent(authKey)}`;
-      const response = await fetch(verifyUrl, {
-        method: 'GET',
-        headers: {
-          authkey: authKey,
-        },
-      });
-
-      const data = await response.json().catch(() => ({}));
-      console.log('[MSG91 Verify Response]', {
-        type: data.type,
-        message: data.message,
-        code: data.code,
-      });
-      const isSuccess =
-        response.ok &&
-        (data.type === 'success' ||
-          data.message?.toLowerCase().includes('success') ||
-          data.message?.toLowerCase().includes('verified') ||
-          data.message?.toLowerCase().includes('already verified'));
-
-      if (!isSuccess) {
-        return {
-          success: false,
-          error: data.message || 'Incorrect OTP code. Please try again.',
-        };
-      }
-    }
-
-    // Verification succeeded: remove from store
+  if (isMatch) {
+    // Delete OTP record immediately upon successful verification
     otpStore.delete(formatted);
     return {
       success: true,
       formattedMobile: formatted,
     };
-  } catch (err: any) {
-    console.error('[MSG91] Error verifying SMS OTP:', err);
+  } else {
+    const remaining = Math.max(0, record.maxAttempts - record.attempts);
+    if (remaining === 0) {
+      otpStore.delete(formatted);
+      return {
+        success: false,
+        error: 'अधिकतम 3 गलत कोशिशें! सुरक्षा कारणों से यह OTP रद्द कर दिया गया है। कृपया नया OTP मांगें।',
+        attemptsRemaining: 0,
+      };
+    }
     return {
       success: false,
-      error: 'Failed to verify OTP with MSG91. Please try again.',
+      error: `गलत OTP कोड दर्ज किया गया। आपके पास ${remaining} कोशिश शेष है।`,
+      attemptsRemaining: remaining,
     };
   }
 }
 
 /**
- * Resend Mobile OTP via MSG91
+ * Resend Mobile OTP with cooldown and rate limit enforcement
  */
 export async function resendMobileOtp(
   rawMobile: string,
   clientIp: string
-): Promise<{ success: boolean; error?: string; cooldownSeconds?: number }> {
+): Promise<{
+  success: boolean;
+  error?: string;
+  cooldownSeconds?: number;
+  message?: string;
+}> {
   return sendMobileOtp(rawMobile, clientIp);
 }
 
