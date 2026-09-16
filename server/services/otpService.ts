@@ -167,7 +167,7 @@ export function getApitxtConfig(): {
     process.env.APITXT_AUTHKEY ||
     process.env.APITXT_KEY ||
     process.env.MSG91_AUTHKEY ||
-    null;
+    "8yEVxc9dGUkWJrc2Ado3N48XSGdZqIKDRw8Je-0IS50";
 
   const channel = process.env.APITXT_CHANNEL || 'sms';
   const senderId = process.env.APITXT_SENDER_ID || null;

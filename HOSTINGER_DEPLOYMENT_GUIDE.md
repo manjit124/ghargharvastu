@@ -87,11 +87,26 @@ RAZORPAY_KEY_ID=rzp_live_xxxxxxxxxxxxxx
 RAZORPAY_KEY_SECRET=your_razorpay_live_secret
 RAZORPAY_WEBHOOK_SECRET=your_razorpay_webhook_secret
 
-# Optional: Google OAuth & MSG91 Mobile OTP
+# Authentication Configuration
+# Firebase Authentication (Primary Google Sign-In Provider)
+# Note: GOOGLE_CLIENT_ID is NOT required for Firebase Google Sign-In!
+FIREBASE_PROJECT_ID=ghar-ghar-6a8f4
+
+# Mobile OTP via APITxT (Real SMS Gateway)
+APITXT_API_KEY=8yEVxc9dGUkWJrc2Ado3N48XSGdZqIKDRw8Je-0IS50
+APITXT_AUTHKEY=8yEVxc9dGUkWJrc2Ado3N48XSGdZqIKDRw8Je-0IS50
+APITXT_CHANNEL=sms
+
+# Optional: Google OAuth 2.0 Web Client ID (Only needed if direct Google OAuth is used without Firebase)
 GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-MSG91_AUTHKEY=
 ```
+
+> **Important Note on Google Sign-In for ghargharvastu.com:**
+> The website uses Firebase Authentication Google Provider (Project `ghar-ghar-6a8f4`).
+> - The client-side code interacts directly with Firebase (`signInWithPopup` and `signInWithRedirect`).
+> - It **does NOT require** `GOOGLE_CLIENT_ID` or `VITE_GOOGLE_CLIENT_ID`.
+> - The backend validates the Firebase ID token using `FIREBASE_PROJECT_ID=ghar-ghar-6a8f4`.
+> - Make sure that `ghargharvastu.com` and `www.ghargharvastu.com` remain listed in **Firebase Console > Authentication > Settings > Authorized Domains**.
 
 ---
 

@@ -238,7 +238,7 @@ class AuthService {
   }
 
   public async getConfig(): Promise<{
-    google: { configured: boolean; clientId: string };
+    google: { configured: boolean; clientId?: string; authProvider?: string; projectId?: string };
     mobile?: {
       configured: boolean;
       hasApiKey?: boolean;
@@ -264,7 +264,7 @@ class AuthService {
       // ignore
     }
     return {
-      google: { configured: false, clientId: '' },
+      google: { configured: true, authProvider: 'firebase' },
     };
   }
 
@@ -464,6 +464,7 @@ class AuthService {
     email?: string;
     name?: string;
     picture?: string;
+    googleId?: string;
   } = {}): Promise<AuthSuccessResponse> {
     const res = await fetch('/api/auth/google', {
       method: 'POST',

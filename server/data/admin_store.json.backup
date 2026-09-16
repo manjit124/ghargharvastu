@@ -5508,7 +5508,8 @@
         "adsWatchedCount": 0
       },
       "createdAt": "2026-09-15T09:42:10.754Z",
-      "updatedAt": "2026-09-15T09:42:10.754Z"
+      "updatedAt": "2026-09-15T09:42:10.754Z",
+      "preferredLanguage": "hi"
     }
   ],
   "rewardTransactionTokens": [

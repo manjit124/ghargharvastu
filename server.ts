@@ -340,13 +340,16 @@ async function startServer() {
   // Auth Configuration Status (Google, APITxT Mobile OTP, Email)
   app.get("/api/auth/config", (_req, res) => {
     const googleClientId = process.env.GOOGLE_CLIENT_ID || "";
+    const firebaseProjectId = process.env.FIREBASE_PROJECT_ID || "ghar-ghar-6a8f4";
     const apitxtStatus = getApitxtStatus();
     const emailStatus = getEmailConfigStatus();
 
     res.json({
       google: {
-        configured: !!googleClientId,
-        clientId: googleClientId,
+        configured: true,
+        authProvider: "firebase",
+        projectId: firebaseProjectId,
+        ...(googleClientId ? { clientId: googleClientId } : {}),
       },
       mobile: {
         configured: apitxtStatus.configured,
@@ -366,15 +369,17 @@ async function startServer() {
     });
   });
 
-  // Google OAuth Authentication (Supports Access Token and ID Token credential)
+  // Google OAuth Authentication (Supports Access Token, Google ID Token, and Firebase ID Token)
   app.post("/api/auth/google", async (req, res) => {
-    const { credential, accessToken, email, name, picture } = req.body;
-    const googleClientId = process.env.GOOGLE_CLIENT_ID;
+    const { credential, idToken, accessToken, email, name, picture, googleId, uid } = req.body || {};
+    const googleClientId = process.env.GOOGLE_CLIENT_ID || "";
+    const firebaseProjectId = process.env.FIREBASE_PROJECT_ID || "ghar-ghar-6a8f4";
+    const authToken = credential || idToken;
 
-    if (!credential && !accessToken && !email) {
+    if (!authToken && !accessToken && !email) {
       return res.status(400).json({
         success: false,
-        error: "Google credential or access token is required.",
+        error: "Google credential, ID token, or access token is required.",
       });
     }
 
@@ -402,25 +407,47 @@ async function startServer() {
       }
     }
 
-    // 2. Verify via Google TokenInfo API if JWT credential provided
-    if (!googleUser && credential && typeof credential === "string") {
+    // 2. Verify JWT token (Firebase Auth ID Token or Google OAuth ID token)
+    if (!googleUser && authToken && typeof authToken === "string") {
       try {
-        const verifyResp = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`);
-        if (verifyResp.ok) {
-          const payload = await verifyResp.json();
-          if (!googleClientId || payload.aud === googleClientId || process.env.SKIP_GOOGLE_AUD_CHECK) {
-            googleUser = {
-              email: payload.email?.trim()?.toLowerCase(),
-              name: payload.name || payload.given_name || "Vastu Homeowner",
-              picture: payload.picture,
-              sub: payload.sub,
-            };
+        const parts = authToken.split(".");
+        if (parts.length === 3) {
+          const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf-8"));
+
+          // Check if token is a Firebase Auth ID Token
+          const isFirebaseToken =
+            (typeof payload.iss === "string" && payload.iss.startsWith("https://securetoken.google.com/")) ||
+            payload.aud === firebaseProjectId;
+
+          if (isFirebaseToken) {
+            // Verify project match and token expiry
+            const isProjectMatch =
+              !firebaseProjectId ||
+              payload.aud === firebaseProjectId ||
+              payload.iss === `https://securetoken.google.com/${firebaseProjectId}`;
+            const isNotExpired = !payload.exp || payload.exp * 1000 > Date.now() - 60000;
+
+            const tokenEmail = payload.email || email;
+            if (isProjectMatch && isNotExpired && tokenEmail && typeof tokenEmail === "string") {
+              googleUser = {
+                email: tokenEmail.trim().toLowerCase(),
+                name: payload.name || payload.display_name || name || "Vastu Homeowner",
+                picture: payload.picture || picture,
+                sub: payload.sub || payload.user_id || googleId || uid,
+              };
+            }
           }
-        } else {
-          // Fallback: parse JWT
-          const parts = credential.split(".");
-          if (parts.length === 3) {
-            const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf-8"));
+        }
+      } catch (err) {
+        console.error("[GoogleAuth] Error inspecting Firebase ID token payload:", err);
+      }
+
+      // If not resolved as Firebase token or if standard Google OAuth ID token, verify with Google TokenInfo
+      if (!googleUser) {
+        try {
+          const verifyResp = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(authToken)}`);
+          if (verifyResp.ok) {
+            const payload = await verifyResp.json();
             if (!googleClientId || payload.aud === googleClientId || process.env.SKIP_GOOGLE_AUD_CHECK) {
               googleUser = {
                 email: payload.email?.trim()?.toLowerCase(),
@@ -430,25 +457,26 @@ async function startServer() {
               };
             }
           }
+        } catch (err) {
+          console.error("[GoogleAuth] Error checking Google tokeninfo:", err);
         }
-      } catch (err) {
-        console.error("[GoogleAuth] Error verifying credential format:", err);
       }
     }
 
-    // Fallback: if trusted email was provided with verified sub
+    // 3. Fallback: if trusted email was provided with verified sub/googleId
     if (!googleUser && email && typeof email === "string" && email.includes("@")) {
       googleUser = {
         email: email.trim().toLowerCase(),
         name: name || "Vastu Homeowner",
         picture,
+        sub: googleId || uid,
       };
     }
 
     if (!googleUser || !googleUser.email) {
       return res.status(401).json({
         success: false,
-        error: "Unable to verify Google user identity. Please try again or sign in with Email and Password.",
+        error: "Unable to verify Google user identity. Please try again or sign in with Mobile OTP.",
       });
     }
 

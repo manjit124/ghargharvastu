@@ -18,9 +18,16 @@ import {
   Edit3,
   LogOut,
   Check,
+  Loader2,
 } from 'lucide-react';
 import { authService, AuthSuccessResponse, AuthSessionResponse } from '../../services/authService';
 import { setPreferredLanguage, AppLanguage } from '../../services/languageService';
+import {
+  signInWithGoogleViaFirebase,
+  signInWithGoogleViaFirebaseRedirect,
+  checkFirebaseRedirectResult,
+  parseFirebaseAuthError,
+} from '../../lib/firebase';
 
 declare global {
   interface Window {
@@ -74,13 +81,16 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthenticated }) => {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [authConfig, setAuthConfig] = useState<{
-    google: { configured: boolean; clientId: string };
+    google: { configured: boolean; clientId?: string; authProvider?: string };
     mobile?: { configured: boolean };
   } | null>(null);
 
+  // Google Redirect & Fallback States
+  const [isResolvingRedirect, setIsResolvingRedirect] = useState(false);
+  const [showRedirectFallbackButton, setShowRedirectFallbackButton] = useState(false);
+
   // Success Screen Data
   const [successAuthData, setSuccessAuthData] = useState<AuthSuccessResponse | null>(null);
-  const googleBtnRef = useRef<HTMLDivElement>(null);
 
   // Cooldown countdown timer effect
   useEffect(() => {
@@ -95,10 +105,45 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthenticated }) => {
     };
   }, [otpCooldown]);
 
-  // Fetch server configuration and check existing session on mount
+  // Fetch server configuration, resolve redirect result, and check existing session on mount
   useEffect(() => {
-    // Check if user is already logged in
+    let isMounted = true;
+
+    // 1. Check if user just returned from Google OAuth Redirect flow
+    checkFirebaseRedirectResult()
+      .then(async (fbUser) => {
+        if (!isMounted || !fbUser) return;
+        setIsResolvingRedirect(true);
+        setIsLoading(true);
+        try {
+          const res = await authService.loginWithGoogle({
+            credential: fbUser.idToken,
+            email: fbUser.email,
+            name: fbUser.name,
+            picture: fbUser.picture,
+            googleId: fbUser.uid,
+          });
+          setSuccessAuthData(res);
+          setScreenStep('success');
+          setTimeout(() => onAuthenticated(res), 1200);
+        } catch (err: any) {
+          console.error('[Google Redirect Login Error]:', err);
+          setError(err.message || 'Google redirect login verification failed.');
+        } finally {
+          setIsResolvingRedirect(false);
+          setIsLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (!isMounted) return;
+        console.warn('[Firebase Auth] Redirect resolution issue:', err);
+        const parsed = parseFirebaseAuthError(err, selectedLanguage);
+        setError(parsed.message);
+      });
+
+    // 2. Check if user already has an active session
     authService.getSession().then((session) => {
+      if (!isMounted) return;
       if (session.authenticated && session.user) {
         setExistingSession(session);
         setScreenStep('existing_session');
@@ -108,43 +153,16 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthenticated }) => {
     });
 
     authService.getConfig().then((cfg) => {
+      if (!isMounted) return;
       setAuthConfig(cfg);
-      // Attempt to initialize Google Identity Services button if configured
-      if (cfg?.google?.configured && cfg.google.clientId && typeof window !== 'undefined' && window.google?.accounts?.id) {
-        try {
-          window.google.accounts.id.initialize({
-            client_id: cfg.google.clientId,
-            callback: async (response: any) => {
-              if (response.credential) {
-                try {
-                  setIsLoading(true);
-                  const res = await authService.loginWithGoogle({ credential: response.credential });
-                  setSuccessAuthData(res);
-                  setScreenStep('success');
-                  setTimeout(() => onAuthenticated(res), 1500);
-                } catch (err: any) {
-                  setError(err.message || 'Google authentication failed');
-                } finally {
-                  setIsLoading(false);
-                }
-              }
-            },
-          });
-          if (googleBtnRef.current) {
-            window.google.accounts.id.renderButton(googleBtnRef.current, {
-              theme: 'outline',
-              size: 'large',
-              width: '100%',
-              text: 'continue_with',
-              shape: 'pill',
-            });
-          }
-        } catch (err) {
-          console.warn('Google Identity initialization deferred:', err);
-        }
-      }
+    }).catch((err) => {
+      console.warn('[AuthConfig] Could not load config:', err);
     });
-  }, [onAuthenticated]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [onAuthenticated, selectedLanguage]);
 
   const handleLanguageChange = (lang: AppLanguage) => {
     setSelectedLanguage(lang);
@@ -342,68 +360,86 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthenticated }) => {
   };
 
   // ==========================================
-  // GOOGLE OAUTH FLOW
+  // GOOGLE OAUTH FLOW (FIREBASE POPUP + REDIRECT FALLBACK)
   // ==========================================
-  const handleGoogleSignIn = async () => {
+  const handleGoogleSignIn = async (forceRedirect: boolean = false) => {
     setError(null);
     setNotice(null);
-
-    const clientId = authConfig?.google?.clientId;
-
-    if (!clientId) {
-      setNotice(
-        selectedLanguage === 'hi'
-          ? 'गूगल साइन-इन को सक्रिय करने के लिए GOOGLE_CLIENT_ID आवश्यक है। आप अपने मोबाइल नंबर और OTP से बिना किसी सेटअप के तुरंत लॉगिन कर सकते हैं — आपको 5 फ्री क्रेडिट मिलेंगे!'
-          : selectedLanguage === 'hinglish'
-          ? 'Google Sign-In ke liye GOOGLE_CLIENT_ID chahiye. Aap Mobile Number + OTP se turant login karein — aapko 5 free credits milenge!'
-          : 'To enable Google Sign-In, configure GOOGLE_CLIENT_ID, or sign in right away with Mobile OTP to receive 5 free credits!'
-      );
-      return;
-    }
-
+    setShowRedirectFallbackButton(false);
     setIsLoading(true);
+
     try {
-      if (typeof window !== 'undefined' && window.google?.accounts?.oauth2) {
-        const tokenClient = window.google.accounts.oauth2.initTokenClient({
-          client_id: clientId,
-          scope: 'openid email profile',
-          callback: async (tokenResponse: any) => {
-            if (tokenResponse.error) {
-              setError(tokenResponse.error_description || 'Google authorization cancelled');
-              setIsLoading(false);
-              return;
-            }
-            if (tokenResponse.access_token) {
-              try {
-                const res = await authService.loginWithGoogle({
-                  accessToken: tokenResponse.access_token,
-                });
-                setSuccessAuthData(res);
-                setScreenStep('success');
-                setTimeout(() => onAuthenticated(res), 1500);
-              } catch (err: any) {
-                setError(err.message || 'Google authentication failed');
-              } finally {
-                setIsLoading(false);
-              }
-            }
-          },
+      const fbResult = await signInWithGoogleViaFirebase({
+        mode: forceRedirect ? 'redirect' : 'popup',
+        allowRedirectFallback: true,
+      });
+
+      // If redirected to Google login
+      if ('redirected' in fbResult && fbResult.redirected) {
+        setNotice(
+          selectedLanguage === 'hi'
+            ? 'सुरक्षित Google लॉगिन पेज पर ले जाया जा रहा है...'
+            : 'Redirecting to secure Google Sign-In...'
+        );
+        return;
+      }
+
+      // If returned credential from popup
+      if ('idToken' in fbResult && fbResult.email) {
+        const res = await authService.loginWithGoogle({
+          credential: fbResult.idToken,
+          email: fbResult.email,
+          name: fbResult.name,
+          picture: fbResult.picture,
+          googleId: fbResult.uid,
         });
-        tokenClient.requestAccessToken({ prompt: 'consent' });
-      } else if (typeof window !== 'undefined' && window.google?.accounts?.id) {
-        window.google.accounts.id.prompt((notification: any) => {
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            setIsLoading(false);
-          }
-        });
-      } else {
-        const res = await authService.loginWithGoogle();
         setSuccessAuthData(res);
         setScreenStep('success');
-        setTimeout(() => onAuthenticated(res), 1500);
+        setTimeout(() => onAuthenticated(res), 1200);
+        return;
       }
-    } catch (err: any) {
-      setError(err.message || 'Google Sign-In failed. Please try again.');
+    } catch (fbErr: any) {
+      console.warn('[Google Auth Provider Result]:', fbErr);
+      const parsed = parseFirebaseAuthError(fbErr, selectedLanguage);
+
+      // User closed popup or browser blocked opener
+      if (fbErr?.code === 'auth/popup-closed-by-user') {
+        setError(parsed.message);
+        setShowRedirectFallbackButton(true);
+        setIsLoading(false);
+        return;
+      }
+
+      // Popup blocked by browser policy -> automatic redirect
+      if (fbErr?.code === 'auth/popup-blocked') {
+        try {
+          setNotice(
+            selectedLanguage === 'hi'
+              ? 'ब्राउज़र में पॉपअप ब्लॉक हुआ। सीधे Google लॉगिन पर रीडायरेक्ट किया जा रहा है...'
+              : 'Popup was blocked. Redirecting directly to Google login...'
+          );
+          await signInWithGoogleViaFirebaseRedirect();
+          return;
+        } catch (redirectErr: any) {
+          const redirectParsed = parseFirebaseAuthError(redirectErr, selectedLanguage);
+          setError(redirectParsed.message);
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // Domain or provider configuration error
+      if (fbErr?.code === 'auth/unauthorized-domain' || fbErr?.code === 'auth/operation-not-allowed') {
+        setError(parsed.message);
+        setIsLoading(false);
+        return;
+      }
+
+      // Any other Firebase error
+      setError(parsed.message);
+      if (parsed.canTryRedirect) {
+        setShowRedirectFallbackButton(true);
+      }
       setIsLoading(false);
     }
   };
@@ -807,6 +843,29 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthenticated }) => {
   }
 
   // ==========================================
+  // RENDER: REDIRECT VERIFICATION LOADER
+  // ==========================================
+  if (isResolvingRedirect) {
+    return (
+      <div className="min-h-screen bg-[#FAF8F5] flex items-center justify-center p-4 font-sans">
+        <div className="bg-white border border-stone-200 rounded-3xl p-8 max-w-sm w-full text-center space-y-4 shadow-xl">
+          <div className="w-14 h-14 rounded-2xl bg-amber-600 text-white flex items-center justify-center mx-auto shadow-md">
+            <Loader2 className="w-7 h-7 animate-spin" />
+          </div>
+          <h2 className="font-heading font-extrabold text-stone-900 text-lg">
+            {selectedLanguage === 'hi' ? 'Google खाता सत्यापित हो रहा है...' : 'Verifying Google Account...'}
+          </h2>
+          <p className="text-xs text-stone-500 leading-relaxed">
+            {selectedLanguage === 'hi'
+              ? 'कृपया प्रतीक्षा करें, आपका वास्तु प्रोफ़ाइल सुरक्षित रूप से लोड किया जा रहा है।'
+              : 'Please wait, securely signing in and loading your Vastu profile.'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ==========================================
   // RENDER: MAIN AUTH SCREEN
   // ==========================================
   return (
@@ -886,33 +945,57 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthenticated }) => {
 
           {/* Google Sign-In Button */}
           <div className="space-y-2">
-            <div ref={googleBtnRef} className="w-full min-h-[42px]">
+            <div className="w-full min-h-[42px] space-y-2">
               <button
                 type="button"
-                onClick={handleGoogleSignIn}
+                onClick={() => handleGoogleSignIn(false)}
                 disabled={isLoading}
-                className="w-full py-2.5 px-4 rounded-2xl border border-stone-200 bg-white hover:bg-stone-50 active:scale-[0.99] text-stone-700 font-semibold text-xs sm:text-sm flex items-center justify-center gap-2.5 shadow-xs transition-colors cursor-pointer"
+                className="w-full py-2.5 px-4 rounded-2xl border border-stone-200 bg-white hover:bg-stone-50 active:scale-[0.99] text-stone-700 font-semibold text-xs sm:text-sm flex items-center justify-center gap-2.5 shadow-xs transition-colors cursor-pointer disabled:opacity-60"
               >
-                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                  <path
-                    fill="#4285F4"
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                  />
-                  <path
-                    fill="#EA4335"
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                  />
-                </svg>
-                <span>Continue with Google</span>
+                {isLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-amber-600 shrink-0" />
+                ) : (
+                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                    <path
+                      fill="#4285F4"
+                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                    />
+                    <path
+                      fill="#EA4335"
+                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                    />
+                  </svg>
+                )}
+                <span>
+                  {isLoading
+                    ? selectedLanguage === 'hi'
+                      ? 'Google से जुड़ रहे हैं...'
+                      : 'Connecting to Google...'
+                    : 'Continue with Google'}
+                </span>
               </button>
+
+              {/* Optional Redirect Fallback Button (visible if popup was closed, blocked, or requested) */}
+              {showRedirectFallbackButton && (
+                <button
+                  type="button"
+                  onClick={() => handleGoogleSignIn(true)}
+                  disabled={isLoading}
+                  className="w-full text-center text-[11px] text-amber-700 hover:text-amber-800 font-bold underline py-1 transition-colors cursor-pointer"
+                >
+                  {selectedLanguage === 'hi'
+                    ? '🔄 सीधे Google Redirect से लॉगिन करें (यदि पॉपअप न खुले)'
+                    : '🔄 Sign in using Google Redirect instead (if popup fails)'}
+                </button>
+              )}
             </div>
           </div>
 
