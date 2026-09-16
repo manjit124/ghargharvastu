@@ -100,6 +100,14 @@ export class PaymentConfigService {
     const rawMode = (process.env.RAZORPAY_MODE || '').trim().toUpperCase();
     if (rawMode === 'LIVE') {
       this.mode = 'LIVE';
+    } else if (rawMode === 'TEST') {
+      this.mode = 'TEST';
+    } else if (
+      (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_ID.trim().startsWith('rzp_live_')) ||
+      (process.env.RAZORPAY_LIVE_KEY_ID && process.env.RAZORPAY_LIVE_KEY_ID.trim().startsWith('rzp_live_'))
+    ) {
+      // Auto-detect LIVE mode when live key is provided and mode not explicitly set to TEST
+      this.mode = 'LIVE';
     } else {
       this.mode = 'TEST';
     }
@@ -127,7 +135,6 @@ export class PaymentConfigService {
    * - Live Key ID is missing
    * - Live Key Secret is missing
    * - credentials cannot authenticate with Razorpay
-   * - webhook configuration is missing where required
    */
   public async setMode(
     newMode: PaymentMode,
@@ -173,24 +180,18 @@ export class PaymentConfigService {
       const candidate =
         this.vault.liveKeyId ||
         process.env.RAZORPAY_LIVE_KEY_ID ||
-        (process.env.RAZORPAY_KEY_ID?.startsWith('rzp_live') ? process.env.RAZORPAY_KEY_ID : null);
+        (process.env.RAZORPAY_KEY_ID?.trim().startsWith('rzp_live') ? process.env.RAZORPAY_KEY_ID : null) ||
+        process.env.RAZORPAY_KEY_ID;
       return candidate?.trim() || null;
     }
 
-    // TEST mode: check vault, test key id, generic key id, or alternative env variables
+    // TEST mode
     const candidate =
       this.vault.testKeyId ||
       process.env.RAZORPAY_TEST_KEY_ID ||
-      process.env.RAZORPAY_KEY_ID ||
-      (process.env.RAZORPAY_MODE?.startsWith('rzp_test_') ? process.env.RAZORPAY_MODE : null) ||
-      (process.env.RAZORPAY_KEY_SECRET?.startsWith('rzp_test_') ? process.env.RAZORPAY_KEY_SECRET : null);
+      process.env.RAZORPAY_KEY_ID;
 
-    if (candidate && candidate.trim()) {
-      const trimmed = candidate.trim();
-      return trimmed.startsWith('rzp_test_') ? trimmed : `rzp_test_${trimmed}`;
-    }
-
-    return null;
+    return candidate?.trim() || null;
   }
 
   /**
@@ -199,30 +200,18 @@ export class PaymentConfigService {
    */
   public getActiveSecret(): string | null {
     if (this.mode === 'LIVE') {
-      return (
+      const secret =
         this.vault.liveKeySecret ||
         process.env.RAZORPAY_LIVE_KEY_SECRET ||
-        (this.mode === 'LIVE' ? process.env.RAZORPAY_KEY_SECRET || null : null)
-      );
+        process.env.RAZORPAY_KEY_SECRET;
+      return secret?.trim() || null;
     }
 
-    const envSecret = process.env.RAZORPAY_KEY_SECRET;
-    const cleanEnvSecret = envSecret && !envSecret.startsWith('rzp_test_') ? envSecret.trim() : null;
-
-    // Check RAZORPAY_MODE if user inadvertently pasted secret into RAZORPAY_MODE
-    const rawMode = (process.env.RAZORPAY_MODE || '').trim();
-    const modeAsSecret =
-      rawMode.length >= 16 && !['TEST', 'LIVE'].includes(rawMode.toUpperCase()) && !rawMode.startsWith('rzp_test_')
-        ? rawMode
-        : null;
-
-    return (
+    const secret =
       this.vault.testKeySecret ||
       process.env.RAZORPAY_TEST_KEY_SECRET ||
-      cleanEnvSecret ||
-      modeAsSecret ||
-      null
-    );
+      process.env.RAZORPAY_KEY_SECRET;
+    return secret?.trim() || null;
   }
 
   /**
@@ -230,19 +219,18 @@ export class PaymentConfigService {
    */
   public getActiveWebhookSecret(): string | null {
     if (this.mode === 'LIVE') {
-      return (
+      const secret =
         this.vault.liveWebhookSecret ||
         process.env.RAZORPAY_LIVE_WEBHOOK_SECRET ||
-        (this.mode === 'LIVE' ? process.env.RAZORPAY_WEBHOOK_SECRET || null : null)
-      );
+        process.env.RAZORPAY_WEBHOOK_SECRET;
+      return secret?.trim() || null;
     }
 
-    return (
+    const secret =
       this.vault.testWebhookSecret ||
       process.env.RAZORPAY_TEST_WEBHOOK_SECRET ||
-      process.env.RAZORPAY_WEBHOOK_SECRET ||
-      null
-    );
+      process.env.RAZORPAY_WEBHOOK_SECRET;
+    return secret?.trim() || null;
   }
 
   public isConfigured(mode?: PaymentMode): boolean {
@@ -251,31 +239,27 @@ export class PaymentConfigService {
       const keyId =
         this.vault.liveKeyId ||
         process.env.RAZORPAY_LIVE_KEY_ID ||
-        (process.env.RAZORPAY_KEY_ID?.startsWith('rzp_live') ? process.env.RAZORPAY_KEY_ID : null);
+        process.env.RAZORPAY_KEY_ID;
       const secret =
         this.vault.liveKeySecret ||
         process.env.RAZORPAY_LIVE_KEY_SECRET ||
-        (this.mode === 'LIVE' ? process.env.RAZORPAY_KEY_SECRET : null);
-      return Boolean(keyId && secret && keyId.length > 8 && secret.length > 6);
+        process.env.RAZORPAY_KEY_SECRET;
+      return Boolean(keyId && secret && keyId.trim().length > 6 && secret.trim().length > 6);
     }
 
     const keyId = this.getActiveKeyId();
     const secret = this.getActiveSecret();
-    return Boolean(keyId && secret && keyId.length > 6 && secret.length > 6);
+    return Boolean(keyId && secret && keyId.trim().length > 6 && secret.trim().length > 6);
   }
 
   /**
    * Checks whether the active credentials are authentic Razorpay cloud credentials
-   * (as opposed to synthetic sandbox / test fallback credentials).
    */
   public hasLiveApiCredentials(): boolean {
     const keyId = this.getActiveKeyId();
     const secret = this.getActiveSecret();
     if (!keyId || !secret) return false;
-    if (keyId.includes('sandbox') || keyId.includes('vastuvision')) {
-      return false;
-    }
-    return /^rzp_(test|live)_[a-zA-Z0-9]{10,}$/.test(keyId) && secret.length >= 8;
+    return /^rzp_(test|live)_[a-zA-Z0-9]{8,}$/.test(keyId.trim()) && secret.trim().length >= 8;
   }
 
   /**
@@ -364,42 +348,31 @@ export class PaymentConfigService {
     const liveKeyId =
       this.vault.liveKeyId ||
       process.env.RAZORPAY_LIVE_KEY_ID ||
-      (process.env.RAZORPAY_KEY_ID?.startsWith('rzp_live') ? process.env.RAZORPAY_KEY_ID : null);
+      (process.env.RAZORPAY_KEY_ID?.trim().startsWith('rzp_live') ? process.env.RAZORPAY_KEY_ID : null) ||
+      process.env.RAZORPAY_KEY_ID;
     const liveSecret =
       this.vault.liveKeySecret ||
       process.env.RAZORPAY_LIVE_KEY_SECRET ||
-      (this.mode === 'LIVE' ? process.env.RAZORPAY_KEY_SECRET : null);
+      process.env.RAZORPAY_KEY_SECRET;
 
-    if (!liveKeyId) {
+    if (!liveKeyId || !liveKeyId.trim()) {
       return {
         allowed: false,
         reason: 'Live payment configuration is incomplete: Live Key ID (rzp_live_...) is missing.',
       };
     }
 
-    if (!liveKeyId.startsWith('rzp_live_')) {
+    if (!liveKeyId.trim().startsWith('rzp_live_')) {
       return {
         allowed: false,
         reason: 'Live payment configuration is incomplete: Key ID must be an authentic Razorpay Live key starting with "rzp_live_".',
       };
     }
 
-    if (!liveSecret || liveSecret.length < 8) {
+    if (!liveSecret || liveSecret.trim().length < 8) {
       return {
         allowed: false,
         reason: 'Live payment configuration is incomplete: Live Key Secret is missing or invalid.',
-      };
-    }
-
-    // Verify webhook secret
-    const webhookSecret =
-      this.vault.liveWebhookSecret ||
-      process.env.RAZORPAY_LIVE_WEBHOOK_SECRET ||
-      (this.mode === 'LIVE' ? process.env.RAZORPAY_WEBHOOK_SECRET : null);
-    if (!webhookSecret) {
-      return {
-        allowed: false,
-        reason: 'Live payment configuration is incomplete: Live Webhook Secret is required for reliable production order processing.',
       };
     }
 
@@ -534,22 +507,33 @@ export class PaymentConfigService {
       this.lastCheckedTimestamp = now;
     }
 
-    const testKeyId = this.getActiveKeyId();
-    const testSecret = this.getActiveSecret();
-    const testWebhook = this.getActiveWebhookSecret();
+    const testKeyId =
+      this.vault.testKeyId ||
+      process.env.RAZORPAY_TEST_KEY_ID ||
+      (this.mode === 'TEST' ? process.env.RAZORPAY_KEY_ID : null);
+    const testSecret =
+      this.vault.testKeySecret ||
+      process.env.RAZORPAY_TEST_KEY_SECRET ||
+      (this.mode === 'TEST' ? process.env.RAZORPAY_KEY_SECRET : null);
+    const testWebhook =
+      this.vault.testWebhookSecret ||
+      process.env.RAZORPAY_TEST_WEBHOOK_SECRET ||
+      (this.mode === 'TEST' ? process.env.RAZORPAY_WEBHOOK_SECRET : null);
 
     const liveKeyId =
       this.vault.liveKeyId ||
       process.env.RAZORPAY_LIVE_KEY_ID ||
-      (process.env.RAZORPAY_KEY_ID?.startsWith('rzp_live') ? process.env.RAZORPAY_KEY_ID : null);
+      (process.env.RAZORPAY_KEY_ID?.trim().startsWith('rzp_live') ? process.env.RAZORPAY_KEY_ID : null) ||
+      (this.mode === 'LIVE' ? process.env.RAZORPAY_KEY_ID : null);
     const liveSecret =
       this.vault.liveKeySecret ||
       process.env.RAZORPAY_LIVE_KEY_SECRET ||
-      (this.mode === 'LIVE' ? process.env.RAZORPAY_KEY_SECRET : null);
+      (this.mode === 'LIVE' ? process.env.RAZORPAY_KEY_SECRET : null) ||
+      (process.env.RAZORPAY_KEY_ID?.trim().startsWith('rzp_live') ? process.env.RAZORPAY_KEY_SECRET : null);
     const liveWebhook =
       this.vault.liveWebhookSecret ||
       process.env.RAZORPAY_LIVE_WEBHOOK_SECRET ||
-      (this.mode === 'LIVE' ? process.env.RAZORPAY_WEBHOOK_SECRET : null);
+      process.env.RAZORPAY_WEBHOOK_SECRET;
 
     // Production readiness analysis
     const reasons: string[] = [];

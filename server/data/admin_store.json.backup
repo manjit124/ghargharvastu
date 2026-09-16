@@ -827,7 +827,7 @@
       "passwordHash": "$2b$10$s4PHOBP7FLTX3WT09jTMCeYTHplQF3KiZCL8cOXa81DHPHMS5KWrS",
       "preferredLanguage": "hinglish",
       "createdAt": "2026-09-11T07:40:03.277Z",
-      "updatedAt": "2026-09-12T17:21:37.091Z",
+      "updatedAt": "2026-09-16T08:22:27.320Z",
       "lastActive": "2026-09-12T16:27:01.844Z",
       "plan": "pro",
       "status": "active",
@@ -3765,10 +3765,7 @@
     }
   ],
   "paymentEvents": [],
-  "paymentVault": {
-    "testKeyId": "rzp_test_Tb8lW66b2ho0H8",
-    "testKeySecret": "6Y1vKhhUxk0MFDGjZLaDvD1z"
-  },
+  "paymentVault": {},
   "userSubscriptions": [
     {
       "id": "sub_1789205772175_618",
@@ -4464,14 +4461,14 @@
       "creditsBalance": 22,
       "totalSpentCredits": 3,
       "todayUsage": {
-        "date": "2026-09-12",
-        "aiRequestsCount": 2,
-        "imageAnalysesCount": 1,
+        "date": "2026-09-16",
+        "aiRequestsCount": 0,
+        "imageAnalysesCount": 0,
         "homeScansCount": 0,
         "adsWatchedCount": 0
       },
       "createdAt": "2026-09-11T07:40:03.278Z",
-      "updatedAt": "2026-09-12T17:21:37.091Z",
+      "updatedAt": "2026-09-16T08:22:27.320Z",
       "preferredLanguage": "hinglish",
       "planExpiry": "2026-10-12T13:42:34.873Z"
     },
@@ -5526,7 +5523,7 @@
     "dailyBudgetThresholdUSD": 50,
     "monthlyBudgetThresholdUSD": 1000,
     "todayRequestCount": 0,
-    "todayResetDate": "2026-09-15",
+    "todayResetDate": "2026-09-16",
     "monthRequestCount": 0,
     "monthResetDate": "2026-09",
     "totalTokensUsed": 0,

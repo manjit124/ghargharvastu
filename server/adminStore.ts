@@ -2477,7 +2477,12 @@ class AdminDataStore {
     const sub = this.getUserSubscription(userId);
     const plan = this.plans.find((p) => p.id === account.plan) || this.plans[0];
 
-    const isRazorpayConfigured = !!(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET);
+    const isRazorpayConfigured = !!(
+      (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) ||
+      (process.env.RAZORPAY_LIVE_KEY_ID && process.env.RAZORPAY_LIVE_KEY_SECRET) ||
+      (this.paymentVault?.liveKeyId && this.paymentVault?.liveKeySecret) ||
+      (this.paymentVault?.testKeyId && this.paymentVault?.testKeySecret)
+    );
 
     // Can user watch rewarded ads?
     let canWatchAd = false;
