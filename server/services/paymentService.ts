@@ -174,7 +174,15 @@ class PaymentService {
         mode: currentMode,
       };
     } catch (err: any) {
-      console.error('[PaymentService] Razorpay cloud API order create failed:', err?.error?.description || err?.message || err);
+      console.error('[PaymentService] Razorpay cloud API order create failed:', {
+        errorCode: err?.error?.code || err?.code || 'UNKNOWN',
+        description: err?.error?.description || err?.message || 'No description provided',
+        field: err?.error?.field || null,
+        source: err?.error?.source || null,
+        step: err?.error?.step || null,
+        reason: err?.error?.reason || null,
+        statusCode: err?.statusCode || null,
+      });
       return {
         success: false,
         configured: true,

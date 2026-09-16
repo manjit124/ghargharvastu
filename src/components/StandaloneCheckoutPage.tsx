@@ -265,8 +265,8 @@ export const StandaloneCheckoutPage: React.FC<StandaloneCheckoutPageProps> = ({ 
         },
         prefill: {
           name: account?.userName || 'Vastu Homeowner',
-          email: account?.userEmail || 'user@vastuvision.ai',
-          contact: account?.mobile || '9999999999',
+          email: account?.userEmail && account.userEmail.includes('@') ? account.userEmail : undefined,
+          contact: account?.mobile && /^[6-9]\d{9}$/.test(account.mobile) ? account.mobile : undefined,
         },
         notes: {
           planId,

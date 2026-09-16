@@ -593,6 +593,24 @@
   ],
   "users": [
     {
+      "id": "usr_g_1789557325907_561",
+      "name": "Shivshahi Doors",
+      "email": "shivshahidoors@gmail.com",
+      "authProvider": "google",
+      "isEmailVerified": true,
+      "avatar": "https://lh3.googleusercontent.com/a/ACg8ocJlxyiT9WDqxGW-dvRClW-PRUkC1QIAjQ3a0yyGl_4UYzUovEFA=s96-c",
+      "preferredLanguage": "hi",
+      "createdAt": "2026-09-16T11:15:25.907Z",
+      "updatedAt": "2026-09-16T11:15:27.238Z",
+      "lastActive": "2026-09-16T11:15:25.907Z",
+      "plan": "free",
+      "status": "active",
+      "questionsAsked": 0,
+      "photosAnalyzed": 0,
+      "roomScansCompleted": 0,
+      "savedReportsCount": 0
+    },
+    {
       "id": "usr_m_1789465330754_354",
       "name": "Test User",
       "email": "user_919820123456@phone.vastuvision.ai",
@@ -827,15 +845,18 @@
       "passwordHash": "$2b$10$s4PHOBP7FLTX3WT09jTMCeYTHplQF3KiZCL8cOXa81DHPHMS5KWrS",
       "preferredLanguage": "hinglish",
       "createdAt": "2026-09-11T07:40:03.277Z",
-      "updatedAt": "2026-09-16T08:22:39.485Z",
-      "lastActive": "2026-09-12T16:27:01.844Z",
+      "updatedAt": "2026-09-16T11:14:58.235Z",
+      "lastActive": "2026-09-16T11:14:56.880Z",
       "plan": "pro",
       "status": "active",
       "questionsAsked": 0,
       "photosAnalyzed": 0,
       "roomScansCompleted": 0,
       "savedReportsCount": 0,
-      "planExpiry": "2026-10-12T13:42:34.873Z"
+      "planExpiry": "2026-10-12T13:42:34.873Z",
+      "isEmailVerified": true,
+      "authProvider": "google",
+      "avatar": "https://lh3.googleusercontent.com/a/ACg8ocJVrdFVR1lI1ni9cJGIDHdzo4RtPct19mGLPuXXUVGeQhA5ZWY=s96-c"
     },
     {
       "id": "usr_1789112114770_869",
@@ -2086,6 +2107,32 @@
     "rewardedDailyLimitReached": 0
   },
   "creditLedger": [
+    {
+      "id": "tx_1789557325908_982",
+      "userId": "usr_g_1789557325907_561",
+      "userName": "Shivshahi Doors",
+      "userEmail": "shivshahidoors@gmail.com",
+      "transactionId": "trial_usr_g_1789557325907_561",
+      "type": "FREE_TRIAL",
+      "amount": 0,
+      "balanceBefore": 0,
+      "balanceAfter": 0,
+      "reason": "New User Free Trial initiated: 5 Chat Minutes + 5 Photo Analyses",
+      "createdAt": "2026-09-16T11:15:25.908Z"
+    },
+    {
+      "id": "tx_1789551456413_193",
+      "userId": "guest_daa0fc77357685fa",
+      "userName": "Vastu Homeowner",
+      "userEmail": "user_guest_daa0fc77357685fa@vastuvision.ai",
+      "transactionId": "trial_guest_daa0fc77357685fa",
+      "type": "FREE_TRIAL",
+      "amount": 0,
+      "balanceBefore": 0,
+      "balanceAfter": 0,
+      "reason": "New User Free Trial initiated: 5 Chat Minutes + 5 Photo Analyses",
+      "createdAt": "2026-09-16T09:37:36.413Z"
+    },
     {
       "id": "tx_1789465330754_755",
       "userId": "usr_m_1789465330754_354",
@@ -4468,7 +4515,7 @@
         "adsWatchedCount": 0
       },
       "createdAt": "2026-09-11T07:40:03.278Z",
-      "updatedAt": "2026-09-16T08:22:39.485Z",
+      "updatedAt": "2026-09-16T11:14:58.235Z",
       "preferredLanguage": "hinglish",
       "planExpiry": "2026-10-12T13:42:34.873Z"
     },
@@ -5506,6 +5553,47 @@
       },
       "createdAt": "2026-09-15T09:42:10.754Z",
       "updatedAt": "2026-09-15T09:42:10.754Z",
+      "preferredLanguage": "hi"
+    },
+    {
+      "userId": "guest_daa0fc77357685fa",
+      "userName": "Vastu Homeowner",
+      "userEmail": "user_guest_daa0fc77357685fa@vastuvision.ai",
+      "plan": "free",
+      "freeChatMinutesRemaining": 5,
+      "freePhotosRemaining": 5,
+      "creditsBalance": 0,
+      "totalSpentCredits": 0,
+      "trialAbuseDetected": false,
+      "todayUsage": {
+        "date": "2026-09-16",
+        "aiRequestsCount": 0,
+        "imageAnalysesCount": 0,
+        "homeScansCount": 0,
+        "adsWatchedCount": 0
+      },
+      "createdAt": "2026-09-16T09:37:36.413Z",
+      "updatedAt": "2026-09-16T09:37:36.413Z"
+    },
+    {
+      "userId": "usr_g_1789557325907_561",
+      "userName": "Shivshahi Doors",
+      "userEmail": "shivshahidoors@gmail.com",
+      "plan": "free",
+      "freeChatMinutesRemaining": 5,
+      "freePhotosRemaining": 5,
+      "creditsBalance": 0,
+      "totalSpentCredits": 0,
+      "trialAbuseDetected": false,
+      "todayUsage": {
+        "date": "2026-09-16",
+        "aiRequestsCount": 0,
+        "imageAnalysesCount": 0,
+        "homeScansCount": 0,
+        "adsWatchedCount": 0
+      },
+      "createdAt": "2026-09-16T11:15:25.908Z",
+      "updatedAt": "2026-09-16T11:15:27.239Z",
       "preferredLanguage": "hi"
     }
   ],

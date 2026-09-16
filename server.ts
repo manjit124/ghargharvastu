@@ -1194,12 +1194,24 @@ async function startServer() {
       );
 
       if (!orderResult.success) {
+        console.warn("[Payments] Order creation rejected by service:", {
+          userId,
+          planId,
+          error: orderResult.error,
+          message: orderResult.message,
+          configured: orderResult.configured,
+        });
         return res.status(400).json(orderResult);
       }
 
       res.json(orderResult);
     } catch (err: any) {
-      console.error("[Payments] Error creating order:", err);
+      console.error("[Payments] Error creating order:", {
+        errorMessage: err?.message,
+        errorCode: err?.code,
+        statusCode: err?.statusCode,
+        description: err?.error?.description,
+      });
       res.status(400).json({
         success: false,
         error: "PAYMENT_ORDER_ERROR",
@@ -1232,12 +1244,21 @@ async function startServer() {
       );
 
       if (!subResult.success) {
+        console.warn("[Payments] Subscription checkout rejected by service:", {
+          userId,
+          planId,
+          error: subResult.error,
+          message: subResult.message,
+        });
         return res.status(400).json(subResult);
       }
 
       res.json(subResult);
     } catch (err: any) {
-      console.error("[Payments] Error creating subscription:", err);
+      console.error("[Payments] Error creating subscription:", {
+        errorMessage: err?.message,
+        errorCode: err?.code,
+      });
       res.status(400).json({
         success: false,
         error: "PAYMENT_SUBSCRIPTION_ERROR",
@@ -1254,6 +1275,11 @@ async function startServer() {
       const { orderId, paymentId, signature } = req.body;
 
       if (!orderId || !paymentId || !signature) {
+        console.warn("[Payments] Payment verification request missing mandatory fields:", {
+          hasOrderId: Boolean(orderId),
+          hasPaymentId: Boolean(paymentId),
+          hasSignature: Boolean(signature),
+        });
         return res.status(400).json({
           success: false,
           error: "MISSING_PAYMENT_DETAILS",
@@ -1268,12 +1294,21 @@ async function startServer() {
       });
 
       if (!verifyResult.success) {
+        console.warn("[Payments] Payment verification failed:", {
+          orderId,
+          paymentId,
+          error: verifyResult.error,
+          message: verifyResult.message,
+        });
         return res.status(400).json(verifyResult);
       }
 
       res.json(verifyResult);
     } catch (err: any) {
-      console.error("[Payments] Error verifying payment:", err);
+      console.error("[Payments] Error verifying payment:", {
+        errorMessage: err?.message,
+        errorCode: err?.code,
+      });
       res.status(400).json({
         success: false,
         error: "VERIFICATION_FAILED",

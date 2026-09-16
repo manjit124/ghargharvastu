@@ -272,38 +272,28 @@ export const MonetizationModal: React.FC<MonetizationModalProps> = ({
       activeRzpRef.current = null;
     }
 
-    // 2. Forcefully remove any lingering DOM elements or backdrops injected by Razorpay SDK
+    // 2. Hide container if currently not in use - NEVER remove .razorpay-container from the DOM!
+    // Razorpay SDK binds kt.container to document.body on script initialization.
+    // Removing .razorpay-container causes Razorpay to mount its checkout iframe to an orphaned DOM node.
+    // In all browsers (including Android Chrome), an iframe detached from document.body has contentWindow === null,
+    // which directly triggers Razorpay's alert: "This browser is not supported. Please try payment in another browser."
     try {
-      const selectors = [
-        '.razorpay-container',
-        '.razorpay-backdrop',
-        'iframe.razorpay-checkout-frame',
-        'iframe[src*="razorpay"]',
-        'div[class*="razorpay-container"]',
-        'div[class*="razorpay-backdrop"]',
-        'div[class*="razorpay-modal"]',
-      ];
-      const lingeringElements = document.querySelectorAll(selectors.join(', '));
-      lingeringElements.forEach((el) => {
-        try {
-          if (el.parentNode) {
-            el.parentNode.removeChild(el);
-          } else {
-            el.remove();
-          }
-        } catch {
-          // ignore
-        }
-      });
+      const container = document.querySelector('.razorpay-container') as HTMLElement | null;
+      if (container && !activeRzpRef.current) {
+        container.style.display = 'none';
+      }
 
       // 3. Reset document body styles that Razorpay might have altered
       if (document.body && document.body.style) {
         if (document.body.style.pointerEvents === 'none') {
           document.body.style.pointerEvents = 'auto';
         }
+        if (document.body.style.overflow === 'hidden' && !activeRzpRef.current) {
+          document.body.style.overflow = '';
+        }
       }
     } catch (err) {
-      console.warn('[MonetizationModal] Error removing Razorpay DOM artifacts:', err);
+      console.warn('[MonetizationModal] Error resetting Razorpay styles:', err);
     }
   };
 
@@ -401,8 +391,8 @@ export const MonetizationModal: React.FC<MonetizationModalProps> = ({
       },
       prefill: {
         name: account?.userName || 'Vastu Homeowner',
-        email: account?.userEmail || 'user@vastuvision.ai',
-        contact: account?.mobile || '9999999999',
+        email: account?.userEmail && account.userEmail.includes('@') ? account.userEmail : undefined,
+        contact: account?.mobile && /^[6-9]\d{9}$/.test(account.mobile) ? account.mobile : undefined,
       },
       notes: {
         planId: order.planId,
@@ -559,7 +549,10 @@ export const MonetizationModal: React.FC<MonetizationModalProps> = ({
 
   const loadRazorpayScript = (): Promise<{ success: boolean; error?: string }> => {
     return new Promise((resolve) => {
-      if (typeof (window as any).Razorpay === 'function') {
+      const hasRzp = typeof (window as any).Razorpay === 'function';
+      const hasContainer = typeof document !== 'undefined' && Boolean(document.querySelector('.razorpay-container'));
+
+      if (hasRzp && hasContainer) {
         resolve({ success: true });
         return;
       }
@@ -616,7 +609,7 @@ export const MonetizationModal: React.FC<MonetizationModalProps> = ({
 
       // Check if checkout.js script already exists in document
       const existingScript = document.querySelector('script[src*="checkout.razorpay.com/v1/checkout.js"]');
-      if (existingScript) {
+      if (existingScript && hasContainer) {
         let checkAttempts = 0;
         const interval = setInterval(() => {
           if (timedOut) {
@@ -640,6 +633,15 @@ export const MonetizationModal: React.FC<MonetizationModalProps> = ({
           }
         }, 120);
         return;
+      }
+
+      // If existing script tag exists but container was missing/detached, purge stale script tag and inject fresh
+      if (existingScript && !hasContainer) {
+        try {
+          existingScript.remove();
+        } catch {
+          // ignore
+        }
       }
 
       injectFreshScript();
@@ -763,8 +765,8 @@ export const MonetizationModal: React.FC<MonetizationModalProps> = ({
         },
         prefill: {
           name: account?.userName || 'Vastu Homeowner',
-          email: account?.userEmail || 'user@vastuvision.ai',
-          contact: account?.mobile || '9999999999',
+          email: account?.userEmail && account.userEmail.includes('@') ? account.userEmail : undefined,
+          contact: account?.mobile && /^[6-9]\d{9}$/.test(account.mobile) ? account.mobile : undefined,
         },
         notes: {
           planId,
