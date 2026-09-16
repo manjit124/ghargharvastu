@@ -1282,6 +1282,28 @@ async function startServer() {
     }
   });
 
+  // Check Razorpay Order Status (for cross-tab sync, polling, and fallback verification)
+  app.get("/api/payments/order-status/:orderId", async (req, res) => {
+    try {
+      const { session } = getOrCreateSessionForClient(req, res);
+      const userId = session.userId;
+      const orderId = req.params.orderId;
+
+      if (!orderId) {
+        return res.status(400).json({ success: false, message: "orderId parameter is required." });
+      }
+
+      const statusResult = await paymentService.checkOrderStatus(userId, orderId);
+      res.json(statusResult);
+    } catch (err: any) {
+      console.error("[Payments] Error checking order status:", err);
+      res.status(500).json({
+        success: false,
+        message: err?.message || "Failed to check order status.",
+      });
+    }
+  });
+
   // Universal Razorpay Webhook Receivers (both /api/payments/webhook and /api/webhooks/razorpay)
   const webhookHandler = (req: any, res: any) => {
     try {

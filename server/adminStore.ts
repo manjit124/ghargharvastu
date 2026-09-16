@@ -1607,6 +1607,20 @@ class AdminDataStore {
     transactionId?: string
   ): { success: boolean; account: UserCreditAccount; ledgerRecord: CreditLedgerRecord } {
     const account = this.getUserAccount(userId);
+
+    // Prevent duplicate credit addition for identical transaction ID and type
+    if (transactionId) {
+      const existingTx = this.creditLedger.find(
+        (rec) => rec.userId === userId && rec.transactionId === transactionId && rec.type === type
+      );
+      if (existingTx) {
+        console.log(
+          `[AdminStore] Transaction ${transactionId} already recorded for user ${userId}. Skipping duplicate credit allocation.`
+        );
+        return { success: true, account, ledgerRecord: existingTx };
+      }
+    }
+
     const balanceBefore = account.creditsBalance;
     const balanceAfter = Math.max(0, balanceBefore + amount);
 

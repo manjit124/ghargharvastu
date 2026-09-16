@@ -497,6 +497,153 @@ class PaymentService {
 
     return { success: true, message: `Event ${event} processed successfully.` };
   }
+
+  /**
+   * Check order status and reconcile with Razorpay if needed (for cross-tab sync and fallback verification)
+   */
+  public async checkOrderStatus(
+    userId: string,
+    orderId: string
+  ): Promise<{
+    success: boolean;
+    paid: boolean;
+    status: string;
+    orderId: string;
+    planId?: string;
+    planName?: string;
+    paymentId?: string;
+    verifiedAt?: string;
+    account?: any;
+    subscription?: any;
+    message?: string;
+  }> {
+    if (!orderId) {
+      return {
+        success: false,
+        paid: false,
+        status: 'invalid_request',
+        orderId,
+        message: 'Order ID is required.',
+      };
+    }
+
+    const orderRecord = adminStore.getPaymentOrder(orderId);
+    if (!orderRecord) {
+      return {
+        success: false,
+        paid: false,
+        status: 'not_found',
+        orderId,
+        message: 'Payment order was not found in server records.',
+      };
+    }
+
+    if (orderRecord.userId !== userId) {
+      return {
+        success: false,
+        paid: false,
+        status: 'unauthorized',
+        orderId,
+        message: 'Order does not belong to current user session.',
+      };
+    }
+
+    // If order is already recorded as paid
+    if (orderRecord.status === 'paid') {
+      const account = adminStore.getUserAccount(userId);
+      const subscription = adminStore.getUserSubscription(userId);
+      return {
+        success: true,
+        paid: true,
+        status: 'paid',
+        orderId,
+        planId: orderRecord.planId,
+        planName: orderRecord.planName,
+        paymentId: orderRecord.paymentId,
+        verifiedAt: orderRecord.verifiedAt,
+        account,
+        subscription,
+        message: `Payment already verified for ${orderRecord.planName}.`,
+      };
+    }
+
+    // Direct Razorpay API verification fallback: check if order was captured on Razorpay
+    try {
+      if (this.isConfigured()) {
+        const client = paymentConfigService.getClient();
+        if (client && client.orders && typeof client.orders.fetch === 'function') {
+          const rzpOrder = await client.orders.fetch(orderId);
+          if (
+            rzpOrder &&
+            (rzpOrder.status === 'paid' ||
+              (typeof rzpOrder.amount_paid === 'number' && rzpOrder.amount_paid >= rzpOrder.amount))
+          ) {
+            // Retrieve captured payment ID from Razorpay
+            let paymentId = `rzp_${orderId}`;
+            try {
+              if (typeof client.orders.fetchPayments === 'function') {
+                const payments = await client.orders.fetchPayments(orderId);
+                const captured = payments?.items?.find(
+                  (p: any) => p.status === 'captured' || p.status === 'authorized'
+                );
+                if (captured?.id) {
+                  paymentId = captured.id;
+                }
+              }
+            } catch (pErr) {
+              console.warn('[PaymentService] Error fetching order payments from Razorpay:', pErr);
+            }
+
+            // Update order record
+            orderRecord.status = 'paid';
+            orderRecord.paymentId = paymentId;
+            orderRecord.verifiedAt = new Date().toISOString();
+
+            // Safely activate subscription and allocate credits
+            const activation = adminStore.activateSubscriptionFromPayment({
+              userId,
+              planId: orderRecord.planId,
+              orderId,
+              paymentId,
+              amount: orderRecord.amount,
+              currency: orderRecord.currency,
+              provider: 'razorpay',
+            });
+
+            console.log(
+              `[PaymentService] Successfully reconciled order ${orderId} via direct Razorpay fetch for user ${userId}`
+            );
+
+            return {
+              success: true,
+              paid: true,
+              status: 'paid',
+              orderId,
+              planId: orderRecord.planId,
+              planName: orderRecord.planName,
+              paymentId,
+              verifiedAt: orderRecord.verifiedAt,
+              account: activation.account,
+              subscription: activation.subscription,
+              message: `Payment verified via Razorpay API for ${orderRecord.planName}.`,
+            };
+          }
+        }
+      }
+    } catch (apiErr: any) {
+      console.warn(`[PaymentService] Direct Razorpay check failed for order ${orderId}:`, apiErr?.message);
+    }
+
+    return {
+      success: true,
+      paid: false,
+      status: orderRecord.status,
+      orderId,
+      planId: orderRecord.planId,
+      planName: orderRecord.planName,
+      message: `Order status is currently ${orderRecord.status}.`,
+    };
+  }
 }
 
 export const paymentService = new PaymentService();

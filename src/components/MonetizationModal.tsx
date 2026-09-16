@@ -61,7 +61,7 @@ export const MonetizationModal: React.FC<MonetizationModalProps> = ({
   // Subscribing state & Explicit Payment Transition States
   const [isSubscribing, setIsSubscribing] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<
-    'idle' | 'creating_order' | 'opening_gateway' | 'processing_payment' | 'failed' | 'cancelled' | 'success'
+    'idle' | 'creating_order' | 'opening_gateway' | 'processing_payment' | 'waiting_new_tab' | 'failed' | 'cancelled' | 'success'
   >('idle');
   const [paymentStatusText, setPaymentStatusText] = useState<string | null>(null);
   const [lastSelectedPlanId, setLastSelectedPlanId] = useState<'pro' | 'expert' | null>(null);
@@ -76,42 +76,167 @@ export const MonetizationModal: React.FC<MonetizationModalProps> = ({
   const activeRzpRef = useRef<any>(null);
   const paymentStatusRef = useRef<string>('idle');
   const gatewayWatchdogRef = useRef<any>(null);
+  const accountRef = useRef(account);
+  accountRef.current = account;
+  const initialPlanRef = useRef<string | undefined>(account?.plan);
+  const initialCreditsRef = useRef<number>(account?.creditsBalance ?? 0);
+  const activeOrderIdRef = useRef<string | null>(null);
+  const pollingTimerRef = useRef<any>(null);
+  const preparedOrderRef = useRef(preparedOrder);
+  preparedOrderRef.current = preparedOrder;
 
-  // Synchronize payment completion across tabs/windows
+  const stopPolling = () => {
+    if (pollingTimerRef.current) {
+      clearInterval(pollingTimerRef.current);
+      pollingTimerRef.current = null;
+    }
+  };
+
+  const handlePaymentSuccess = async (planName?: string) => {
+    stopPolling();
+    clearGatewayWatchdog();
+    destroyPreviousRazorpayInstance();
+    setActionError(null);
+    setPaymentStatus('success');
+    setPaymentStatusText('Payment success');
+    const displayPlan = planName || (lastSelectedPlanId === 'expert' ? 'Home Expert' : 'Pro Advisor');
+    setActionSuccess(`Payment successful! Welcome to the ${displayPlan} plan. Your credits have been added.`);
+    setPreparedOrder(null);
+    setIsSubscribing(null);
+    activeOrderIdRef.current = null;
+    await loadCreditData();
+    creditService.fetchCredits().catch(() => {});
+  };
+
+  const startPollingOrderStatus = (orderId?: string, planId?: 'pro' | 'expert') => {
+    stopPolling();
+    if (orderId) {
+      activeOrderIdRef.current = orderId;
+    }
+    let pollCount = 0;
+    const maxPolls = 120; // 5 minutes at 2.5s interval
+
+    pollingTimerRef.current = setInterval(async () => {
+      pollCount++;
+      if (pollCount > maxPolls) {
+        stopPolling();
+        return;
+      }
+
+      // Check order status on server if we have an order ID
+      const curOrderId = activeOrderIdRef.current || preparedOrderRef.current?.orderId;
+      if (curOrderId) {
+        try {
+          const res = await creditService.checkOrderStatus(curOrderId);
+          if (res.paid) {
+            handlePaymentSuccess(res.planName || (planId === 'expert' ? 'Home Expert' : 'Pro Advisor'));
+            return;
+          }
+        } catch {}
+      }
+
+      // Check credit balance & plan upgrade in background
+      try {
+        const fresh = await creditService.fetchCredits();
+        const freshAcc = fresh?.account;
+        if (freshAcc) {
+          const planUpgraded =
+            (freshAcc.plan === 'pro' || freshAcc.plan === 'expert') &&
+            (initialPlanRef.current === 'free' ||
+              (initialPlanRef.current === 'pro' && freshAcc.plan === 'expert'));
+          const creditsAdded = freshAcc.creditsBalance > initialCreditsRef.current;
+          if (planUpgraded || creditsAdded) {
+            handlePaymentSuccess(freshAcc.plan === 'expert' ? 'Home Expert' : 'Pro Advisor');
+          }
+        }
+      } catch {}
+    }, 2500);
+  };
+
+  // Synchronize payment completion across tabs/windows and mobile app switches
   useEffect(() => {
+    // 1. BroadcastChannel listener
+    let bc: BroadcastChannel | null = null;
+    try {
+      bc = new BroadcastChannel('vastuvision_payment_channel');
+      bc.onmessage = (event) => {
+        if (event.data?.type === 'VASTU_PAYMENT_SUCCESS') {
+          console.log('[MonetizationModal] Received cross-tab payment event via BroadcastChannel:', event.data);
+          handlePaymentSuccess(event.data?.planName);
+        }
+      };
+    } catch {}
+
+    // 2. LocalStorage event listener
     const handleStorage = (e: StorageEvent) => {
       if (e.key === 'vastuvision_payment_completed') {
-        loadCreditData();
-        setPaymentStatus('success');
-        setPaymentStatusText('Payment success');
-        setActionSuccess('🎉 Payment Verified! Welcome to the Pro plan.');
-        setPreparedOrder(null);
+        console.log('[MonetizationModal] Received payment completion via localStorage event');
+        let planName: string | undefined;
+        try {
+          if (e.newValue) {
+            const parsed = JSON.parse(e.newValue);
+            planName = parsed?.planName;
+          }
+        } catch {}
+        handlePaymentSuccess(planName);
       }
     };
-    const handleVisibility = () => {
-      if (typeof document !== 'undefined' && document.visibilityState === 'visible' && paymentStatus !== 'success') {
-        creditService
-          .fetchCredits()
-          .then((res) => {
-            const acc = res?.account;
-            if (acc && (acc.plan === 'pro' || acc.plan === 'expert') && account?.plan === 'free') {
-              loadCreditData();
-              setPaymentStatus('success');
-              setPaymentStatusText('Payment success');
-              setActionSuccess(`🎉 Payment Verified! Welcome to the ${acc.plan.toUpperCase()} plan.`);
-              setPreparedOrder(null);
+
+    // 3. PostMessage listener (from popup or standalone tab)
+    const handleWindowMessage = (e: MessageEvent) => {
+      if (e.data?.type === 'VASTU_PAYMENT_SUCCESS') {
+        console.log('[MonetizationModal] Received window message payment success:', e.data);
+        handlePaymentSuccess(e.data?.planName);
+      }
+    };
+
+    // 4. Tab visibility, focus, and pageshow listener (critical for Chrome on Android)
+    const handleVisibilityOrFocus = async () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible' && paymentStatusRef.current !== 'success') {
+        const curOrderId = activeOrderIdRef.current || preparedOrderRef.current?.orderId;
+        if (curOrderId) {
+          try {
+            const res = await creditService.checkOrderStatus(curOrderId);
+            if (res.paid) {
+              handlePaymentSuccess(res.planName);
+              return;
             }
-          })
-          .catch(() => {});
+          } catch {}
+        }
+
+        try {
+          const fresh = await creditService.fetchCredits();
+          const freshAcc = fresh?.account;
+          if (freshAcc && accountRef.current) {
+            const planUpgraded =
+              (freshAcc.plan === 'pro' || freshAcc.plan === 'expert') &&
+              (accountRef.current.plan === 'free' ||
+                (accountRef.current.plan === 'pro' && freshAcc.plan === 'expert'));
+            const creditsIncreased = freshAcc.creditsBalance > accountRef.current.creditsBalance;
+            if (planUpgraded || creditsIncreased) {
+              handlePaymentSuccess(freshAcc.plan === 'expert' ? 'Home Expert' : 'Pro Advisor');
+            }
+          }
+        } catch {}
       }
     };
+
     window.addEventListener('storage', handleStorage);
-    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('message', handleWindowMessage);
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+    window.addEventListener('focus', handleVisibilityOrFocus);
+    window.addEventListener('pageshow', handleVisibilityOrFocus);
+
     return () => {
+      if (bc) bc.close();
       window.removeEventListener('storage', handleStorage);
-      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('message', handleWindowMessage);
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+      window.removeEventListener('pageshow', handleVisibilityOrFocus);
+      stopPolling();
     };
-  }, [account, paymentStatus]);
+  }, []);
 
   const isInIframe = typeof window !== 'undefined' && window.self !== window.top;
 
@@ -195,9 +320,28 @@ export const MonetizationModal: React.FC<MonetizationModalProps> = ({
   };
 
   const openCheckoutInNewTab = (planId: 'pro' | 'expert' = 'pro', orderId?: string) => {
+    const targetOrderId = orderId || preparedOrder?.orderId;
     const couponParam = appliedDiscount?.code ? `&coupon=${encodeURIComponent(appliedDiscount.code)}` : '';
-    const orderParam = orderId ? `&orderId=${encodeURIComponent(orderId)}` : '';
+    const orderParam = targetOrderId ? `&orderId=${encodeURIComponent(targetOrderId)}` : '';
     const checkoutUrl = `/checkout?planId=${planId}${couponParam}${orderParam}`;
+
+    // Requirements 12 & 13:
+    // When the user chooses "Open Checkout in New Tab", clear watchdog and remove any blocked error
+    clearGatewayWatchdog();
+    setActionError(null);
+    setPaymentStatus('waiting_new_tab');
+    setPaymentStatusText('Checkout Active in New Tab');
+    setIsSubscribing(null);
+
+    // Save baseline plan and credits for change detection
+    initialPlanRef.current = account?.plan;
+    initialCreditsRef.current = account?.creditsBalance ?? 0;
+    if (targetOrderId) {
+      activeOrderIdRef.current = targetOrderId;
+    }
+
+    startPollingOrderStatus(targetOrderId, planId);
+
     try {
       const opened = window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
       if (!opened) {
@@ -240,11 +384,7 @@ export const MonetizationModal: React.FC<MonetizationModalProps> = ({
           });
 
           if (verifyRes.success) {
-            setPaymentStatus('success');
-            setPaymentStatusText('Payment success');
-            setActionSuccess(`🎉 Payment Verified! Welcome to the ${order.planName} plan.`);
-            setPreparedOrder(null);
-            await loadCreditData();
+            await handlePaymentSuccess(order.planName);
           } else {
             setPaymentStatus('failed');
             setPaymentStatusText('Payment failed');
@@ -606,10 +746,7 @@ export const MonetizationModal: React.FC<MonetizationModalProps> = ({
             });
 
             if (verifyRes.success) {
-              setPaymentStatus('success');
-              setPaymentStatusText('Payment success');
-              setActionSuccess(`🎉 Payment Verified! Welcome to the ${planDisplayName} plan.`);
-              await loadCreditData();
+              await handlePaymentSuccess(planDisplayName);
             } else {
               setPaymentStatus('failed');
               setPaymentStatusText('Payment failed');
@@ -686,6 +823,11 @@ export const MonetizationModal: React.FC<MonetizationModalProps> = ({
           return;
         }
 
+        // If user already switched to new tab or completed payment, ignore
+        if (paymentStatusRef.current !== 'opening_gateway') {
+          return;
+        }
+
         // If still in 'opening_gateway', verify whether Razorpay DOM modal / iframe exists
         const frameExists = Boolean(
           document.querySelector('iframe.razorpay-checkout-frame') ||
@@ -695,12 +837,12 @@ export const MonetizationModal: React.FC<MonetizationModalProps> = ({
         );
 
         if (!frameExists && paymentStatusRef.current === 'opening_gateway') {
-          console.warn('[MonetizationModal] Gateway frame not detected after timeout; popup likely blocked.');
+          console.warn('[MonetizationModal] Gateway frame not detected after timeout; offering new tab checkout.');
           setPaymentStatus('failed');
-          setPaymentStatusText('Payment failed');
+          setPaymentStatusText('Checkout popup blocked');
           setIsSubscribing(null);
           setActionError(
-            'Payment Gateway Blocked: The checkout popup or window was blocked by your browser or sandbox restrictions. Please enable popups or open the app in a new tab.'
+            'Payment Gateway Blocked: The checkout popup was blocked by your browser or sandbox restrictions. Please click "Open Checkout in New Tab" below to complete payment securely.'
           );
           cleanupRazorpayInstance();
         }
@@ -718,7 +860,7 @@ export const MonetizationModal: React.FC<MonetizationModalProps> = ({
         setIsSubscribing(null);
         setActionError(
           isBlocked
-            ? 'Payment Gateway Blocked: The checkout popup was blocked by your browser or sandbox restrictions. Please allow popups or open the app in a new tab.'
+            ? 'Payment Gateway Blocked: The checkout popup was blocked by your browser or sandbox restrictions. Please click "Open Checkout in New Tab" below to complete payment securely.'
             : `Payment Gateway Error: ${openErr.message || 'Unable to launch checkout window.'}`
         );
         cleanupRazorpayInstance();
@@ -852,7 +994,7 @@ export const MonetizationModal: React.FC<MonetizationModalProps> = ({
         )}
 
         {/* Action alerts */}
-        {actionError && (
+        {actionError && paymentStatus !== 'waiting_new_tab' && paymentStatus !== 'success' && (
           <div className="mx-5 mt-4 p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-900 flex items-start justify-between gap-3 shadow-xs animate-in fade-in">
             <div className="flex items-start gap-2.5 flex-1 min-w-0">
               <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
@@ -908,7 +1050,7 @@ export const MonetizationModal: React.FC<MonetizationModalProps> = ({
           <div className="mx-5 mt-4 p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 flex items-center justify-between gap-3 shadow-xs animate-in fade-in">
             <div className="flex items-center gap-2 min-w-0">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span className="font-medium truncate">{actionSuccess}</span>
+              <span className="font-medium break-words leading-relaxed">{actionSuccess}</span>
             </div>
             <button
               type="button"
@@ -1066,6 +1208,8 @@ export const MonetizationModal: React.FC<MonetizationModalProps> = ({
                       ? 'bg-blue-50/90 border-blue-200 text-blue-900'
                       : paymentStatus === 'opening_gateway'
                       ? 'bg-amber-50/90 border-amber-200 text-amber-900'
+                      : paymentStatus === 'waiting_new_tab'
+                      ? 'bg-amber-50/90 border-amber-300 text-amber-950'
                       : paymentStatus === 'processing_payment'
                       ? 'bg-indigo-50/90 border-indigo-200 text-indigo-900'
                       : paymentStatus === 'success'
@@ -1078,6 +1222,7 @@ export const MonetizationModal: React.FC<MonetizationModalProps> = ({
                   <div className="flex items-center gap-3">
                     {paymentStatus === 'creating_order' ||
                     paymentStatus === 'opening_gateway' ||
+                    paymentStatus === 'waiting_new_tab' ||
                     paymentStatus === 'processing_payment' ? (
                       <RefreshCw className="w-5 h-5 animate-spin text-amber-600 shrink-0" />
                     ) : paymentStatus === 'success' ? (
@@ -1095,6 +1240,8 @@ export const MonetizationModal: React.FC<MonetizationModalProps> = ({
                               ? 'Creating order...'
                               : paymentStatus === 'opening_gateway'
                               ? 'Opening gateway...'
+                              : paymentStatus === 'waiting_new_tab'
+                              ? 'Checkout opened in new tab'
                               : paymentStatus === 'processing_payment'
                               ? 'Processing payment...'
                               : paymentStatus === 'success'
@@ -1117,7 +1264,12 @@ export const MonetizationModal: React.FC<MonetizationModalProps> = ({
                       )}
                       {paymentStatus === 'opening_gateway' && (
                         <div className="text-xs text-amber-800 mt-0.5">
-                          Launching payment gateway. If a popup was blocked, please enable popups in your browser.
+                          Launching payment gateway. If a popup was blocked, please click Open in New Tab below.
+                        </div>
+                      )}
+                      {paymentStatus === 'waiting_new_tab' && (
+                        <div className="text-xs text-amber-800 mt-0.5">
+                          Checkout opened in a new tab. Please complete payment there — this page will automatically activate your plan and credits once confirmed.
                         </div>
                       )}
                       {paymentStatus === 'processing_payment' && (
@@ -1143,13 +1295,50 @@ export const MonetizationModal: React.FC<MonetizationModalProps> = ({
                     </div>
                   </div>
 
+                  {paymentStatus === 'waiting_new_tab' && (
+                    <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const checkId = activeOrderIdRef.current || preparedOrder?.orderId;
+                          if (checkId) {
+                            try {
+                              const res = await creditService.checkOrderStatus(checkId);
+                              if (res.paid) {
+                                handlePaymentSuccess(res.planName);
+                                return;
+                              }
+                            } catch {}
+                          }
+                          await loadCreditData();
+                          const fresh = await creditService.fetchCredits();
+                          if (fresh?.account && initialPlanRef.current && fresh.account.plan !== initialPlanRef.current) {
+                            handlePaymentSuccess(fresh.account.plan === 'expert' ? 'Home Expert' : 'Pro Advisor');
+                          }
+                        }}
+                        className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 shadow-xs whitespace-nowrap cursor-pointer"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        <span>Check Status Now</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openCheckoutInNewTab(lastSelectedPlanId || 'pro', preparedOrder?.orderId)}
+                        className="px-3 py-1.5 bg-stone-900 hover:bg-stone-800 active:bg-black text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 shadow-xs whitespace-nowrap cursor-pointer"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>Re-open Tab</span>
+                      </button>
+                    </div>
+                  )}
+
                   {(paymentStatus === 'failed' || paymentStatus === 'cancelled') && (
                     <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
-                      {actionError?.includes('Payment Gateway Blocked') && (
+                      {(actionError?.includes('Payment Gateway Blocked') || actionError?.includes('blocked')) && (
                         <button
                           type="button"
                           onClick={() => openCheckoutInNewTab(lastSelectedPlanId || 'pro', preparedOrder?.orderId)}
-                          className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 shadow-xs whitespace-nowrap cursor-pointer"
+                          className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 shadow-xs whitespace-nowrap cursor-pointer"
                         >
                           <ExternalLink className="w-3.5 h-3.5" />
                           <span>Open Checkout in New Tab</span>

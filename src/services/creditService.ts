@@ -203,6 +203,43 @@ class CreditService {
     return data;
   }
 
+  public async checkOrderStatus(orderId: string): Promise<{
+    success: boolean;
+    paid: boolean;
+    status: string;
+    orderId: string;
+    planId?: string;
+    planName?: string;
+    paymentId?: string;
+    verifiedAt?: string;
+    account?: UserCreditAccount;
+    subscription?: any;
+    message?: string;
+  }> {
+    const userId = getStoredUserId();
+    const res = await fetch(`/api/payments/order-status/${encodeURIComponent(orderId)}`, {
+      credentials: 'include',
+      headers: {
+        ...authService.getAuthHeaders(),
+        'x-user-id': userId,
+      },
+    });
+
+    const text = await res.text();
+    let data: any;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new Error(`Server returned unexpected response (status ${res.status})`);
+    }
+
+    if (data.success && data.paid && data.account) {
+      this.cachedAccount = data.account;
+      this.notify(data.account);
+    }
+    return data;
+  }
+
   public async subscribePlan(
     planId: 'pro' | 'expert',
     durationMonths: number = 1,

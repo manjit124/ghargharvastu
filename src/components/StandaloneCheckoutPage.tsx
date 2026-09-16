@@ -39,6 +39,7 @@ export const StandaloneCheckoutPage: React.FC<StandaloneCheckoutPageProps> = ({ 
   const [statusMessage, setStatusMessage] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [verifiedSub, setVerifiedSub] = useState<any>(null);
+  const [isTestMode, setIsTestMode] = useState<boolean>(false);
 
   // Read URL query params on mount
   useEffect(() => {
@@ -57,6 +58,14 @@ export const StandaloneCheckoutPage: React.FC<StandaloneCheckoutPageProps> = ({ 
     } catch {
       // Ignore URL parsing errors
     }
+
+    // Check payment gateway config (determine if live or test mode)
+    creditService
+      .fetchPaymentConfig()
+      .then((cfg) => {
+        setIsTestMode(Boolean(cfg?.testMode));
+      })
+      .catch(() => {});
 
     // Load user credit data
     creditService
@@ -206,11 +215,36 @@ export const StandaloneCheckoutPage: React.FC<StandaloneCheckoutPageProps> = ({ 
               setStatusMessage('Payment verified! Plan activated.');
               setVerifiedSub(verifyRes);
 
-              // Broadcast update so open app tabs reload credit balance
+              // Multi-channel broadcast to notify main app tab instantly
+              const completedPayload = {
+                type: 'VASTU_PAYMENT_SUCCESS',
+                orderId: response.razorpay_order_id || orderRes.orderId,
+                paymentId: response.razorpay_payment_id,
+                planId,
+                planName: planInfo.name,
+                timestamp: Date.now(),
+              };
+
               try {
-                localStorage.setItem('vastuvision_payment_completed', Date.now().toString());
+                localStorage.setItem('vastuvision_payment_completed', JSON.stringify(completedPayload));
               } catch {
                 // Ignore storage error
+              }
+
+              try {
+                const bc = new BroadcastChannel('vastuvision_payment_channel');
+                bc.postMessage(completedPayload);
+                bc.close();
+              } catch {
+                // BroadcastChannel fallback
+              }
+
+              try {
+                if (window.opener && !window.opener.closed) {
+                  window.opener.postMessage(completedPayload, '*');
+                }
+              } catch {
+                // Ignore postMessage error
               }
 
               // Fetch updated account state
@@ -388,17 +422,19 @@ export const StandaloneCheckoutPage: React.FC<StandaloneCheckoutPageProps> = ({ 
               </button>
             </div>
 
-            {/* Test Mode Banner */}
-            <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-2.5 text-xs text-amber-300">
-              <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-              <div className="space-y-0.5 flex-1 min-w-0">
-                <span className="font-bold block text-amber-200">Razorpay Test Mode Active</span>
-                <p className="text-[11px] text-amber-300/90 leading-relaxed">
-                  You are testing in Sandbox Mode. No real money will be charged. Use test UPI or card{' '}
-                  <code className="font-mono bg-stone-950/60 px-1 py-0.5 rounded text-white">4111 1111 1111 1111</code>.
-                </p>
+            {/* Test Mode Banner (Only displayed when gateway is in Sandbox / Test Mode) */}
+            {isTestMode && (
+              <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-2.5 text-xs text-amber-300">
+                <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <div className="space-y-0.5 flex-1 min-w-0">
+                  <span className="font-bold block text-amber-200">Razorpay Test Mode Active</span>
+                  <p className="text-[11px] text-amber-300/90 leading-relaxed">
+                    You are testing in Sandbox Mode. No real money will be charged. Use test UPI or card{' '}
+                    <code className="font-mono bg-stone-950/60 px-1 py-0.5 rounded text-white">4111 1111 1111 1111</code>.
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Plan Details & Pricing */}
             <div className="p-4 sm:p-5 rounded-2xl bg-stone-950/80 border border-stone-800 space-y-4">
