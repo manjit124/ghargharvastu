@@ -13,6 +13,7 @@ import {
   Layers,
   Crown,
   Zap,
+  BookOpen,
 } from 'lucide-react';
 import { UserProfile, UserCreditAccount } from '../types';
 import { creditService } from '../services/creditService';
@@ -96,6 +97,7 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'scan-room', label: 'Scan Room', icon: Layers },
     { id: 'chat', label: 'Ask AI', icon: MessageSquare },
     { id: 'explore', label: 'Vastu Topics', icon: Search },
+    { id: 'guides', label: 'Vastu Guides', icon: BookOpen },
     { id: 'complete-home', label: 'Whole Home', icon: Home },
     { id: 'colour-advisor', label: 'Colours', icon: Palette },
     { id: 'object-advisor', label: 'Objects', icon: Sparkles },
@@ -111,17 +113,17 @@ export const Header: React.FC<HeaderProps> = ({
           title="VastuVision AI"
         >
           <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr from-amber-600 via-amber-500 to-yellow-500 text-white flex items-center justify-center font-heading font-extrabold text-lg sm:text-xl shadow-md shadow-amber-600/20 group-hover:scale-105 transition-transform shrink-0">
-            V
+            G
           </div>
           <div className="min-w-0">
             <div className="font-heading font-extrabold text-base sm:text-lg text-stone-900 tracking-tight flex items-center gap-1 sm:gap-1.5 leading-none">
-              <span className="truncate">VastuVision</span>
+              <span className="truncate">Ghar Ghar Vastu</span>
               <span className="text-[10px] sm:text-xs px-1 sm:px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-900 font-bold tracking-wide shrink-0">
                 AI
               </span>
             </div>
             <p className="hidden sm:block text-[10px] text-stone-500 font-medium tracking-normal mt-0.5 truncate">
-              Your AI Vastu Home Advisor
+              AI Vastu Advisor for Your Home
             </p>
           </div>
         </div>
@@ -199,10 +201,10 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
             <div className="hidden md:block text-left leading-tight">
               <div className="text-[11px] font-bold text-stone-900 truncate max-w-[90px]">
-                {userProfile?.name || 'User'}
+                {userProfile?.isLoggedIn ? (userProfile?.name || 'User') : 'Sign In'}
               </div>
               <div className="text-[9px] text-amber-700 font-semibold uppercase">
-                {userProfile?.tier || 'free'}
+                {userProfile?.isLoggedIn ? (userProfile?.tier || 'free') : 'Account'}
               </div>
             </div>
           </button>

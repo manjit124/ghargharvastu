@@ -467,7 +467,7 @@ function getEmailOtpTemplate(otp: string, name?: string): string {
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Your VastuVision AI Verification Code</title>
+    <title>Your Ghar Ghar Vastu Verification Code</title>
   </head>
   <body style="margin: 0; padding: 0; background-color: #f7f5f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1c1917;">
     <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f7f5f0; padding: 30px 15px;">
@@ -477,7 +477,7 @@ function getEmailOtpTemplate(otp: string, name?: string): string {
             <!-- Header Banner -->
             <tr>
               <td style="background: linear-gradient(135deg, #d97706 0%, #b45309 100%); padding: 28px 30px; text-align: center;">
-                <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">VastuVision AI</h1>
+                <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">Ghar Ghar Vastu</h1>
                 <p style="margin: 6px 0 0 0; color: #fef3c7; font-size: 13px; font-weight: 500;">Sacred Architecture & Intelligent Space Harmony</p>
               </td>
             </tr>
@@ -486,7 +486,7 @@ function getEmailOtpTemplate(otp: string, name?: string): string {
               <td style="padding: 36px 32px 28px 32px;">
                 <h2 style="margin: 0 0 12px 0; color: #1c1917; font-size: 20px; font-weight: 700;">Namaste, ${recipientName}</h2>
                 <p style="margin: 0 0 24px 0; color: #57534e; font-size: 15px; line-height: 1.6;">
-                  Use the following 6-digit verification code to complete your secure registration or login to VastuVision AI.
+                  Use the following 6-digit verification code to complete your secure registration or login to Ghar Ghar Vastu.
                 </p>
 
                 <!-- OTP Code Display -->
@@ -516,7 +516,7 @@ function getEmailOtpTemplate(otp: string, name?: string): string {
             <tr>
               <td style="background-color: #fafaf9; border-top: 1px solid #e7e5e4; padding: 20px 30px; text-align: center;">
                 <p style="margin: 0; color: #a8a29e; font-size: 11px;">
-                  © ${new Date().getFullYear()} VastuVision AI. All rights reserved.
+                  © ${new Date().getFullYear()} Ghar Ghar Vastu. All rights reserved.
                 </p>
               </td>
             </tr>
@@ -572,8 +572,8 @@ export async function sendEmailOtp(
 
   // Generate cryptographically secure 6-digit OTP
   const otp = crypto.randomInt(100000, 1000000).toString();
-  const fromEmail = process.env.EMAIL_FROM || 'VastuVision AI <verify@vastuvision.ai>';
-  const subject = `Your VastuVision AI Verification Code: ${otp}`;
+  const fromEmail = process.env.EMAIL_FROM || 'Ghar Ghar Vastu <verify@ghargharvastu.com>';
+  const subject = `Your Ghar Ghar Vastu Verification Code: ${otp}`;
   const htmlContent = getEmailOtpTemplate(otp, userName);
 
   try {

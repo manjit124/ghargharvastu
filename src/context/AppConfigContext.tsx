@@ -90,8 +90,8 @@ interface AppConfigContextType {
 }
 
 const DEFAULT_CONFIG: PublicAppConfig = {
-  appName: 'VastuVision AI',
-  supportEmail: 'support@vastuvision.ai',
+  appName: 'Ghar Ghar Vastu',
+  supportEmail: 'support@ghargharvastu.com',
   contactPhone: '+91 98765 43210',
   maintenanceMode: false,
   maintenanceMessage: 'We’re improving your AI Vastu experience. Please try again shortly.',

@@ -39,7 +39,7 @@ export const LegalModals: React.FC<LegalModalProps> = ({ type, onClose }) => {
           {type === 'disclaimer' && (
             <div className="space-y-3">
               <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-950 font-medium">
-                Vastu Shastra is a traditional Indian philosophy of spatial design, orientation, and natural balance. VastuVision AI provides guidance based on classical texts and customary practices.
+                Vastu Shastra is a traditional Indian philosophy of spatial design, orientation, and natural balance. Ghar Ghar Vastu provides guidance based on classical texts and customary practices.
               </div>
               <p>
                 <strong>Non-Scientific Notice:</strong> Vastu guidance is rooted in cultural tradition and should not be considered an empirical or scientific guarantee of financial, medical, or personal outcomes.
@@ -56,7 +56,7 @@ export const LegalModals: React.FC<LegalModalProps> = ({ type, onClose }) => {
           {type === 'privacy' && (
             <div className="space-y-3">
               <p>
-                <strong>Image Processing Privacy:</strong> Images you upload to VastuVision AI are used solely to generate real-time spatial recommendations via secure server-side AI processing.
+                <strong>Image Processing Privacy:</strong> Images you upload to Ghar Ghar Vastu are used solely to generate real-time spatial recommendations via secure server-side AI processing.
               </p>
               <p>
                 <strong>No Public Sharing:</strong> Your uploaded photos of private living rooms, bedrooms, or homes are never made public or used for training without explicit consent.
@@ -70,7 +70,7 @@ export const LegalModals: React.FC<LegalModalProps> = ({ type, onClose }) => {
           {type === 'terms' && (
             <div className="space-y-3">
               <p>
-                By using VastuVision AI, you acknowledge that all AI-generated suggestions are advisory in nature.
+                By using Ghar Ghar Vastu, you acknowledge that all AI-generated suggestions are advisory in nature.
               </p>
               <p>
                 The platform is designed to provide constructive, calming interior recommendations and strictly rejects fear-based, fatalistic, or superstitious claims.
@@ -88,7 +88,7 @@ export const LegalModals: React.FC<LegalModalProps> = ({ type, onClose }) => {
               </p>
               <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200 space-y-2">
                 <div className="flex items-center gap-2 font-bold text-stone-900">
-                  <Mail className="w-4 h-4 text-amber-600" /> support@vastuvision.ai
+                  <Mail className="w-4 h-4 text-amber-600" /> support@ghargharvastu.com
                 </div>
                 <p className="text-stone-500 text-[11px]">
                   Response time: Usually within 24 hours. We serve homeowners, architects, and interior designers across India and globally.

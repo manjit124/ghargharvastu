@@ -1,6 +1,6 @@
 {
-  "name": "VastuVision AI",
-  "description": "Your AI Vastu Home Advisor - Upload photos of any room, wall, door, or furniture for personalized, practical Vastu problem solving with intelligent direction guidance.",
+  "name": "Ghar Ghar Vastu",
+  "description": "Ghar Ghar Vastu - AI Vastu Consultation & Spatial Energy Advisor for your home, apartment, and flats. Upload room photos for instant, practical non-destructive Vastu remedies.",
   "requestFramePermissions": ["camera", "microphone"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

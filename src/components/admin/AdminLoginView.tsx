@@ -132,6 +132,14 @@ export const AdminLoginView: React.FC<AdminLoginViewProps> = ({
                 </button>
                 <button
                   type="button"
+                  onClick={() => handleQuickFill('admin@ghargharvastu.com')}
+                  className="text-[10px] text-amber-700 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-200/80 px-2 py-0.5 rounded-md font-semibold transition-colors cursor-pointer"
+                  title="Autofill admin@ghargharvastu.com"
+                >
+                  admin@ghargharvastu.com
+                </button>
+                <button
+                  type="button"
                   onClick={() => handleQuickFill('admin@vastuvision.ai')}
                   className="text-[10px] text-amber-700 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-200/80 px-2 py-0.5 rounded-md font-semibold transition-colors cursor-pointer"
                   title="Autofill admin@vastuvision.ai"

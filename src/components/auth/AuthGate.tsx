@@ -37,13 +37,14 @@ declare global {
 
 interface AuthGateProps {
   onAuthenticated: (authData: AuthSuccessResponse) => void;
+  onClose?: () => void;
 }
 
 type AuthChannel = 'mobile' | 'email';
 type EmailAuthMode = 'login' | 'register' | 'forgot';
 type MobileStep = 'input' | 'verify';
 
-export const AuthGate: React.FC<AuthGateProps> = ({ onAuthenticated }) => {
+export const AuthGate: React.FC<AuthGateProps> = ({ onAuthenticated, onClose }) => {
   // Navigation & Mode States
   const [selectedLanguage, setSelectedLanguage] = useState<AppLanguage>('hi');
   const [authChannel, setAuthChannel] = useState<AuthChannel>('mobile'); // Default to Mobile OTP!
@@ -870,7 +871,17 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthenticated }) => {
   // ==========================================
   return (
     <div className="min-h-screen bg-stone-100 flex flex-col justify-center items-center p-3.5 sm:p-6">
-      <div className="w-full max-w-md bg-white rounded-3xl border border-stone-200 shadow-xl overflow-hidden">
+      <div className="w-full max-w-md bg-white rounded-3xl border border-stone-200 shadow-xl overflow-hidden relative">
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-white/90 hover:bg-white text-stone-500 hover:text-stone-900 flex items-center justify-center border border-stone-200 shadow-2xs transition-colors cursor-pointer text-xs font-bold"
+            title="Close"
+          >
+            ✕
+          </button>
+        )}
         {/* Language Bar & Header Branding */}
         <div className="bg-gradient-to-b from-amber-500/10 via-amber-500/5 to-transparent p-5 sm:p-6 text-center border-b border-stone-100 relative">
           {/* Language Selector Pills */}

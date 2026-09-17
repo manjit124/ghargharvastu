@@ -1009,8 +1009,8 @@ async function startServer() {
       .filter((p) => p.enabled)
       .sort((a, b) => a.displayOrder - b.displayOrder);
     res.json({
-      appName: adminStore.appSettings.appName || "VastuVision AI",
-      supportEmail: adminStore.appSettings.supportEmail || "support@vastuvision.ai",
+      appName: adminStore.appSettings.appName || "Ghar Ghar Vastu",
+      supportEmail: adminStore.appSettings.supportEmail || "support@ghargharvastu.com",
       contactPhone: adminStore.appSettings.contactPhone || "+91 98765 43210",
       maintenanceMode: adminStore.appSettings.maintenanceMode || false,
       maintenanceMessage: adminStore.appSettings.maintenanceMessage || "Under scheduled maintenance.",
@@ -1979,6 +1979,42 @@ async function startServer() {
       error: "API_ENDPOINT_NOT_FOUND",
       message: `The API endpoint ${req.method} ${req.path} was not found on this server.`,
     });
+  });
+
+  // Explicit handlers for SEO Crawlers (robots.txt and sitemap.xml)
+  app.get("/robots.txt", (_req, res) => {
+    const publicRobots = path.join(process.cwd(), "public", "robots.txt");
+    const distRobots = path.join(process.cwd(), "dist", "robots.txt");
+    let content = "";
+    if (fs.existsSync(publicRobots)) {
+      content = fs.readFileSync(publicRobots, "utf8");
+    } else if (fs.existsSync(distRobots)) {
+      content = fs.readFileSync(distRobots, "utf8");
+    }
+    if (content.includes("vastuvision.ai")) {
+      content = content.replace(/https?:\/\/vastuvision\.ai/g, "https://ghargharvastu.com");
+    }
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.setHeader("Cache-Control", "public, max-age=3600");
+    res.send(content);
+  });
+
+  app.get("/sitemap.xml", (_req, res) => {
+    const publicSitemap = path.join(process.cwd(), "public", "sitemap.xml");
+    const distSitemap = path.join(process.cwd(), "dist", "sitemap.xml");
+    let content = "";
+    if (fs.existsSync(publicSitemap)) {
+      content = fs.readFileSync(publicSitemap, "utf8");
+    } else if (fs.existsSync(distSitemap)) {
+      content = fs.readFileSync(distSitemap, "utf8");
+    }
+    // Safety check: ensure ZERO references to vastuvision.ai
+    if (content.includes("vastuvision.ai")) {
+      content = content.replace(/https?:\/\/vastuvision\.ai/g, "https://ghargharvastu.com");
+    }
+    res.setHeader("Content-Type", "application/xml; charset=utf-8");
+    res.setHeader("Cache-Control", "public, max-age=3600");
+    res.send(content);
   });
 
   // Vite middleware in dev; static serving in production

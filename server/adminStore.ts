@@ -1179,9 +1179,9 @@ const INITIAL_NOTIFICATIONS: NotificationRecord[] = [
 ];
 
 const INITIAL_APP_SETTINGS: AppSettingsConfig = {
-  appName: 'VastuVision AI',
+  appName: 'Ghar Ghar Vastu',
   logo: '/favicon.ico',
-  supportEmail: 'support@vastuvision.ai',
+  supportEmail: 'support@ghargharvastu.com',
   contactPhone: '+91 98765 43210',
   privacyUrl: '#privacy',
   termsUrl: '#terms',
@@ -1412,7 +1412,7 @@ class AdminDataStore {
         return p;
       });
 
-      // Ensure makesoney@gmail.com, shivshahidoors@gmail.com, and admin@vastuvision.ai are active admins
+      // Ensure makesoney@gmail.com, shivshahidoors@gmail.com, admin@ghargharvastu.com, and admin@vastuvision.ai are active admins
       const targetAdmins = [
         {
           id: 'admin_super_1',
@@ -1430,6 +1430,12 @@ class AdminDataStore {
           id: 'admin_super_3',
           name: 'Vastu System Administrator',
           email: 'admin@vastuvision.ai',
+          role: 'SUPER_ADMIN' as const,
+        },
+        {
+          id: 'admin_super_4',
+          name: 'Ghar Ghar Vastu Administrator',
+          email: 'admin@ghargharvastu.com',
           role: 'SUPER_ADMIN' as const,
         },
       ];
@@ -1543,7 +1549,7 @@ class AdminDataStore {
       account = {
         userId,
         userName: name || existingUser?.name || 'Vastu Homeowner',
-        userEmail: email || existingUser?.email || `user_${userId}@vastuvision.ai`,
+        userEmail: email || existingUser?.email || `user_${userId}@ghargharvastu.com`,
         plan: planTier,
         planExpiry: existingUser?.planExpiry,
         freeChatMinutesRemaining: defaultFreeChat,
@@ -3531,7 +3537,7 @@ class AdminDataStore {
 
     if (!user) {
       isNew = true;
-      const formattedEmail = `user_${mobile.replace(/[^\d]/g, '')}@phone.vastuvision.ai`;
+      const formattedEmail = `user_${mobile.replace(/[^\d]/g, '')}@phone.ghargharvastu.com`;
       user = {
         id: 'usr_m_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
         name: name?.trim() || 'Vastu Homeowner',

@@ -22,6 +22,9 @@ import { adminService } from './services/adminService';
 import { AuthGate } from './components/auth/AuthGate';
 import { authService } from './services/authService';
 import { setPreferredLanguage } from './services/languageService';
+import { SEO_TOPIC_PAGES } from './data/seoPagesData';
+import { SeoTopicPageView } from './components/SeoTopicPageView';
+import { BlogHubView } from './components/BlogHubView';
 
 const INITIAL_PROFILE: UserProfile = {
   id: '',
@@ -42,6 +45,11 @@ const INITIAL_PROFILE: UserProfile = {
 export default function App() {
   const { config } = useAppConfig();
   const [activeView, setActiveView] = useState<string>('home');
+  const [currentTopicSlug, setCurrentTopicSlug] = useState<string | null>(null);
+  const [currentBlogSlug, setCurrentBlogSlug] = useState<string | null>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  const [pendingAuthAction, setPendingAuthAction] = useState<(() => void) | null>(null);
+
   const [isAdminActive, setIsAdminActive] = useState<boolean>(() => {
     const isTargetingAdmin =
       window.location.pathname.startsWith('/admin') || window.location.hash === '#admin';
@@ -92,16 +100,19 @@ export default function App() {
     }
   }, [isAdminActive]);
 
+  // Handle popstate for deep links, SEO URLs, and browser back/forward navigation
   useEffect(() => {
     const handlePopState = () => {
+      const pathname = window.location.pathname.toLowerCase();
+
       const isTargetingCheckout =
-        window.location.pathname.startsWith('/checkout') ||
+        pathname.startsWith('/checkout') ||
         window.location.hash.startsWith('#checkout') ||
         window.location.search.includes('view=checkout');
       setIsCheckoutActive(isTargetingCheckout);
 
       const isTargetingAdmin =
-        window.location.pathname.startsWith('/admin') || window.location.hash === '#admin';
+        pathname.startsWith('/admin') || window.location.hash === '#admin';
       if (isTargetingAdmin) {
         if (adminService.isAuthenticated()) {
           setIsAdminActive(true);
@@ -109,10 +120,91 @@ export default function App() {
           window.history.replaceState(null, '', '/');
           setIsAdminActive(false);
         }
+        return;
       } else {
         setIsAdminActive(false);
       }
+
+      // Check for SEO topic pages
+      const cleanSlug = pathname.replace(/^\//, '').split('?')[0].split('#')[0];
+      if (cleanSlug && SEO_TOPIC_PAGES[cleanSlug]) {
+        setCurrentTopicSlug(cleanSlug);
+        setActiveView('topic-page');
+        return;
+      }
+
+      // Check for Blog pages
+      if (pathname === '/blog' || pathname.startsWith('/blog/')) {
+        const blogSlug = pathname.replace('/blog/', '').replace('/blog', '').trim();
+        setCurrentBlogSlug(blogSlug || null);
+        setActiveView('blog');
+        return;
+      }
+
+      // Public Modals & Pages via URL
+      if (pathname === '/pricing') {
+        setIsMonetizationOpen(true);
+        return;
+      }
+      if (pathname === '/privacy-policy') {
+        setLegalModalType('privacy');
+        return;
+      }
+      if (pathname === '/terms') {
+        setLegalModalType('terms');
+        return;
+      }
+      if (pathname === '/disclaimer') {
+        setLegalModalType('disclaimer');
+        return;
+      }
+      if (pathname === '/refund-policy') {
+        setLegalModalType('terms');
+        return;
+      }
+      if (pathname === '/contact') {
+        setLegalModalType('contact');
+        return;
+      }
+      if (pathname === '/about') {
+        setLegalModalType('disclaimer');
+        return;
+      }
+      if (pathname === '/faq') {
+        setCurrentTopicSlug('vastu-shastra');
+        setActiveView('topic-page');
+        return;
+      }
+
+      // Backward compatible route aliases
+      if (pathname === '/ai-vastu-advisor') {
+        setActiveView('home');
+        return;
+      }
+      if (pathname === '/image-analysis') {
+        setActiveView('photo-analysis');
+        return;
+      }
+      if (pathname === '/vastu-guides') {
+        setActiveView('blog');
+        return;
+      }
+      if (pathname === '/direction-guide') {
+        setCurrentTopicSlug('vastu-direction');
+        setActiveView('topic-page');
+        return;
+      }
+
+      if (pathname === '/' || pathname === '') {
+        setActiveView('home');
+        setCurrentTopicSlug(null);
+        setCurrentBlogSlug(null);
+      }
     };
+
+    // Run on mount to catch direct entry / refreshed URLs
+    handlePopState();
+
     window.addEventListener('popstate', handlePopState);
     window.addEventListener('hashchange', handlePopState);
     return () => {
@@ -242,6 +334,16 @@ export default function App() {
   };
 
   const handleAskQuestion = (query: string, img?: string) => {
+    if (!userProfile.isLoggedIn) {
+      setPendingAuthAction(() => () => {
+        setChatInitialPrompt(query);
+        setChatInitialImage(img);
+        setActiveView('chat');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+      setIsAuthModalOpen(true);
+      return;
+    }
     setChatInitialPrompt(query);
     setChatInitialImage(img);
     setActiveView('chat');
@@ -249,9 +351,61 @@ export default function App() {
   };
 
   const handleUploadPhotoForCategory = (categoryName: string) => {
+    if (!userProfile.isLoggedIn) {
+      setPendingAuthAction(() => () => {
+        setPhotoAnalysisRoomHint(categoryName);
+        setActiveView('photo-analysis');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+      setIsAuthModalOpen(true);
+      return;
+    }
     setPhotoAnalysisRoomHint(categoryName);
     setActiveView('photo-analysis');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleNavigate = (view: string) => {
+    if (view === 'guides') {
+      setActiveView('blog');
+      setCurrentBlogSlug(null);
+      if (typeof window !== 'undefined' && window.history?.pushState) {
+        window.history.pushState(null, '', '/blog');
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    if (view === 'home') {
+      setActiveView('home');
+      setCurrentTopicSlug(null);
+      setCurrentBlogSlug(null);
+      if (typeof window !== 'undefined' && window.history?.pushState) {
+        window.history.pushState(null, '', '/');
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    if (['photo-analysis', 'scan-room', 'chat', 'complete-home'].includes(view) && !userProfile.isLoggedIn) {
+      setPendingAuthAction(() => () => {
+        setActiveView(view);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+      setIsAuthModalOpen(true);
+      return;
+    }
+
+    setActiveView(view);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleOpenProfile = () => {
+    if (!userProfile.isLoggedIn) {
+      setIsAuthModalOpen(true);
+    } else {
+      setIsProfileOpen(true);
+    }
   };
 
   // If Standalone Checkout is active (e.g. /checkout or fallback from iframe sandbox)
@@ -273,20 +427,6 @@ export default function App() {
     return <AdminPanel onBackToApp={() => setIsAdminActive(false)} />;
   }
 
-  // If Standalone Checkout mode is requested (e.g. /checkout or opened in new tab), render standalone page
-  if (isCheckoutActive) {
-    return (
-      <StandaloneCheckoutPage
-        onBackToApp={() => {
-          setIsCheckoutActive(false);
-          if (typeof window !== 'undefined' && window.history?.replaceState) {
-            window.history.replaceState(null, '', '/');
-          }
-        }}
-      />
-    );
-  }
-
   // If Maintenance Mode is enabled by Admin and user is not in Admin Panel:
   if (config?.maintenanceMode) {
     return (
@@ -298,21 +438,21 @@ export default function App() {
 
           <div className="space-y-2">
             <h1 className="text-2xl font-black tracking-tight text-stone-900">
-              {config.appName || 'VastuVision AI'}
+              {config.appName || 'Ghar Ghar Vastu'}
             </h1>
             <div className="inline-block px-3 py-1 bg-amber-100 text-amber-900 font-bold text-xs rounded-full">
               Scheduled Maintenance
             </div>
             <p className="text-stone-600 text-sm leading-relaxed pt-2">
               {config.maintenanceMessage ||
-                'VastuVision AI is undergoing scheduled improvements. We will be back shortly.'}
+                'Ghar Ghar Vastu is undergoing scheduled improvements. We will be back shortly.'}
             </p>
           </div>
 
           <div className="pt-4 border-t border-stone-100 flex items-center justify-center text-xs text-stone-500">
             <div className="flex items-center gap-1.5">
               <Mail className="w-4 h-4 text-stone-400" />
-              <span>{config.supportEmail || 'support@vastuvision.ai'}</span>
+              <span>{config.supportEmail || 'support@ghargharvastu.com'}</span>
             </div>
           </div>
         </div>
@@ -328,41 +468,10 @@ export default function App() {
           <div className="w-12 h-12 rounded-2xl bg-amber-600 text-white flex items-center justify-center mx-auto shadow-md">
             <Compass className="w-6 h-6 animate-spin" />
           </div>
-          <div className="text-sm font-bold text-stone-800">VastuVision AI</div>
+          <div className="text-sm font-bold text-stone-800">Ghar Ghar Vastu</div>
           <div className="text-xs text-stone-400">Loading your sacred space...</div>
         </div>
       </div>
-    );
-  }
-
-  // FIRST-LAUNCH AUTHENTICATION GATE
-  // Unauthenticated users MUST log in or create an account before accessing the main application
-  if (!userProfile.isLoggedIn) {
-    return (
-      <AuthGate
-        onAuthenticated={(authData) => {
-          setUserProfile((prev) => ({
-            ...prev,
-            id: authData.user.id,
-            name: authData.user.name,
-            email: authData.user.email,
-            mobile: authData.user.mobile,
-            avatar: authData.user.avatar,
-            authProvider: authData.user.authProvider,
-            isMobileVerified: authData.user.isMobileVerified,
-            isEmailVerified: authData.user.isEmailVerified,
-            isLoggedIn: true,
-            tier: authData.user.plan || 'free',
-            preferredLanguage: authData.user.preferredLanguage || 'hi',
-            homeName: authData.user.homeName || prev.homeName,
-            city: authData.user.city || prev.city,
-            propertyType: authData.user.propertyType || prev.propertyType,
-          }));
-          if (authData.user.preferredLanguage) {
-            setPreferredLanguage(authData.user.preferredLanguage);
-          }
-        }}
-      />
     );
   }
 
@@ -376,7 +485,7 @@ export default function App() {
       <div className="bg-amber-700 text-amber-50 px-3 sm:px-4 py-1.5 text-center text-[10px] sm:text-[11px] font-medium tracking-wide flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 w-full max-w-full leading-tight">
         <ShieldCheck className="w-3.5 h-3.5 text-amber-300 shrink-0" />
         <span className="inline">
-          Traditional Vastu Home Advisor • Practical non-structural suggestions • No fear-mongering
+          Ghar Ghar Vastu • Traditional Vastu Home Advisor • Practical non-structural suggestions • No fear-mongering
         </span>
         <button
           onClick={() => setLegalModalType('disclaimer')}
@@ -408,13 +517,9 @@ export default function App() {
       {/* Main App Navigation Bar */}
       <Header
         activeView={activeView}
-        onNavigate={(view) => {
-          setActiveView(view);
-          setIsAdminActive(false);
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }}
+        onNavigate={handleNavigate}
         onOpenCompass={() => setIsCompassOpen(true)}
-        onOpenProfile={() => setIsProfileOpen(true)}
+        onOpenProfile={handleOpenProfile}
         onOpenMonetization={() => setIsMonetizationOpen(true)}
         userProfile={userProfile}
         onTriggerAdminLogin={() => setIsAdminActive(true)}
@@ -424,13 +529,28 @@ export default function App() {
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-6 pb-24 lg:pb-12 min-w-0">
         {activeView === 'home' && (
           <HomeDashboardView
-            onNavigate={(v) => {
-              setActiveView(v);
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
+            onNavigate={handleNavigate}
             onOpenCompass={() => setIsCompassOpen(true)}
             onAskQuestion={(q) => handleAskQuestion(q)}
             onUploadPhotoForCategory={handleUploadPhotoForCategory}
+          />
+        )}
+
+        {/* Dynamic SEO Topic Pages */}
+        {activeView === 'topic-page' && currentTopicSlug && (
+          <SeoTopicPageView
+            slug={currentTopicSlug}
+            onAskQuestion={handleAskQuestion}
+            onStartAnalysis={handleUploadPhotoForCategory}
+          />
+        )}
+
+        {/* Blog & Knowledge Articles */}
+        {activeView === 'blog' && (
+          <BlogHubView
+            initialArticleSlug={currentBlogSlug || undefined}
+            onAskAi={(q) => handleAskQuestion(q)}
+            onOpenPhotoAnalysis={() => handleNavigate('photo-analysis')}
           />
         )}
 
@@ -485,53 +605,140 @@ export default function App() {
         )}
       </main>
 
-      {/* Footer */}
+      {/* Footer with Crawlable Links */}
       <footer className="bg-white border-t border-stone-200/80 py-10 px-4 sm:px-6 text-stone-600 text-xs">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-amber-600 text-white font-heading font-extrabold flex items-center justify-center text-sm shadow-xs">
-              V
-            </div>
-            <div>
-              <div className="font-heading font-bold text-stone-900 text-sm">
-                {config?.appName || 'VastuVision AI'}
+        <div className="max-w-7xl mx-auto space-y-8">
+          {/* Main Footer Row */}
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-6 border-b border-stone-100">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-amber-600 via-amber-500 to-yellow-500 text-white font-heading font-extrabold flex items-center justify-center text-base shadow-xs">
+                G
               </div>
-              <p className="text-[11px] text-stone-500">
-                Your AI Vastu Home Advisor • Harmony, Natural Light & Practical Living
-              </p>
+              <div>
+                <div className="font-heading font-extrabold text-stone-900 text-base">
+                  Ghar Ghar Vastu
+                </div>
+                <p className="text-[11px] text-stone-500">
+                  AI Vastu Advisor for Your Home • Harmony, Natural Light & Practical Living
+                </p>
+              </div>
+            </div>
+
+            {/* Topic Guides Internal Links */}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-semibold text-stone-600">
+              <a
+                href="/vastu-shastra"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (typeof window !== 'undefined' && window.history?.pushState) {
+                    window.history.pushState(null, '', '/vastu-shastra');
+                    window.dispatchEvent(new PopStateEvent('popstate'));
+                  }
+                }}
+                className="hover:text-amber-800 transition-colors"
+              >
+                Vastu Shastra
+              </a>
+              <a
+                href="/bedroom-vastu"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (typeof window !== 'undefined' && window.history?.pushState) {
+                    window.history.pushState(null, '', '/bedroom-vastu');
+                    window.dispatchEvent(new PopStateEvent('popstate'));
+                  }
+                }}
+                className="hover:text-amber-800 transition-colors"
+              >
+                Bedroom Vastu
+              </a>
+              <a
+                href="/kitchen-vastu"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (typeof window !== 'undefined' && window.history?.pushState) {
+                    window.history.pushState(null, '', '/kitchen-vastu');
+                    window.dispatchEvent(new PopStateEvent('popstate'));
+                  }
+                }}
+                className="hover:text-amber-800 transition-colors"
+              >
+                Kitchen Vastu
+              </a>
+              <a
+                href="/main-door-vastu"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (typeof window !== 'undefined' && window.history?.pushState) {
+                    window.history.pushState(null, '', '/main-door-vastu');
+                    window.dispatchEvent(new PopStateEvent('popstate'));
+                  }
+                }}
+                className="hover:text-amber-800 transition-colors"
+              >
+                Main Door Vastu
+              </a>
+              <a
+                href="/bathroom-vastu"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (typeof window !== 'undefined' && window.history?.pushState) {
+                    window.history.pushState(null, '', '/bathroom-vastu');
+                    window.dispatchEvent(new PopStateEvent('popstate'));
+                  }
+                }}
+                className="hover:text-amber-800 transition-colors"
+              >
+                Bathroom Vastu
+              </a>
+              <a
+                href="/blog"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (typeof window !== 'undefined' && window.history?.pushState) {
+                    window.history.pushState(null, '', '/blog');
+                    window.dispatchEvent(new PopStateEvent('popstate'));
+                  }
+                }}
+                className="hover:text-amber-800 transition-colors"
+              >
+                Vastu Blog & Hub
+              </a>
             </div>
           </div>
 
-          {/* Legal / Trust links */}
-          <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-stone-600">
-            <button
-              onClick={() => setLegalModalType('disclaimer')}
-              className="hover:text-amber-800 transition-colors"
-            >
-              Vastu Disclaimer
-            </button>
-            <button
-              onClick={() => setLegalModalType('privacy')}
-              className="hover:text-amber-800 transition-colors"
-            >
-              Privacy Policy
-            </button>
-            <button
-              onClick={() => setLegalModalType('terms')}
-              className="hover:text-amber-800 transition-colors"
-            >
-              Terms of Service
-            </button>
-            <button
-              onClick={() => setLegalModalType('contact')}
-              className="hover:text-amber-800 transition-colors"
-            >
-              Contact Support
-            </button>
-          </div>
+          {/* Legal / Trust links & Copyright */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
+            <div className="flex flex-wrap items-center gap-4 text-stone-500 font-medium">
+              <button
+                onClick={() => setLegalModalType('disclaimer')}
+                className="hover:text-amber-800 transition-colors"
+              >
+                Vastu Disclaimer
+              </button>
+              <button
+                onClick={() => setLegalModalType('privacy')}
+                className="hover:text-amber-800 transition-colors"
+              >
+                Privacy Policy
+              </button>
+              <button
+                onClick={() => setLegalModalType('terms')}
+                className="hover:text-amber-800 transition-colors"
+              >
+                Terms of Service
+              </button>
+              <button
+                onClick={() => setLegalModalType('contact')}
+                className="hover:text-amber-800 transition-colors"
+              >
+                Contact Support
+              </button>
+            </div>
 
-          <div className="text-[11px] text-stone-400 text-center sm:text-right">
-            © {new Date().getFullYear()} {config?.appName || 'VastuVision AI'}. Built with respect for Indian architecture.
+            <div className="text-[11px] text-stone-400 text-center sm:text-right">
+              © {new Date().getFullYear()} Ghar Ghar Vastu (ghargharvastu.com). All rights reserved.
+            </div>
           </div>
         </div>
       </footer>
@@ -539,12 +746,8 @@ export default function App() {
       {/* Mobile Bottom Navigation (5 tabs) */}
       <BottomNav
         activeView={activeView}
-        onNavigate={(view) => {
-          setActiveView(view);
-          setIsAdminActive(false);
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }}
-        onOpenProfile={() => setIsProfileOpen(true)}
+        onNavigate={handleNavigate}
+        onOpenProfile={handleOpenProfile}
       />
 
       {/* Global Compass Modal */}
@@ -576,6 +779,47 @@ export default function App() {
 
       {/* Legal & Trust Modals */}
       <LegalModals type={legalModalType} onClose={() => setLegalModalType(null)} />
+
+      {/* Auth Modal Overlay for Unauthenticated Users */}
+      {isAuthModalOpen && (
+        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-3 overflow-y-auto animate-in fade-in duration-150">
+          <div className="w-full max-w-md my-auto">
+            <AuthGate
+              onClose={() => {
+                setIsAuthModalOpen(false);
+                setPendingAuthAction(null);
+              }}
+              onAuthenticated={(authData) => {
+                setUserProfile((prev) => ({
+                  ...prev,
+                  id: authData.user.id,
+                  name: authData.user.name,
+                  email: authData.user.email,
+                  mobile: authData.user.mobile,
+                  avatar: authData.user.avatar,
+                  authProvider: authData.user.authProvider,
+                  isMobileVerified: authData.user.isMobileVerified,
+                  isEmailVerified: authData.user.isEmailVerified,
+                  isLoggedIn: true,
+                  tier: authData.user.plan || 'free',
+                  preferredLanguage: authData.user.preferredLanguage || 'hi',
+                  homeName: authData.user.homeName || prev.homeName,
+                  city: authData.user.city || prev.city,
+                  propertyType: authData.user.propertyType || prev.propertyType,
+                }));
+                if (authData.user.preferredLanguage) {
+                  setPreferredLanguage(authData.user.preferredLanguage);
+                }
+                setIsAuthModalOpen(false);
+                if (pendingAuthAction) {
+                  pendingAuthAction();
+                  setPendingAuthAction(null);
+                }
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

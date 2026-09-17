@@ -57,18 +57,18 @@ export const HomeDashboardView: React.FC<HomeDashboardViewProps> = ({
         <div className="max-w-2xl mx-auto text-center space-y-4">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-900 text-xs font-bold tracking-wide">
             <Sparkles className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-            <span className="truncate">Vastu Shastra Powered by Gemini AI Vision</span>
+            <span className="truncate">Vastu Shastra Powered by Ghar Ghar Vastu AI Vision</span>
           </div>
 
           <h1 className="text-2xl sm:text-4xl md:text-5xl font-heading font-extrabold text-stone-900 tracking-tight leading-tight">
-            Ghar ki Vastu Problem?
-            <span className="block text-amber-700 text-xl sm:text-3xl font-bold mt-1">
-              Photo bhejiye ya sawaal poochhiye.
+            Ghar Ghar Vastu – AI Vastu Advisor for Your Home
+            <span className="block text-amber-700 text-lg sm:text-2xl font-bold mt-1.5">
+              Ghar ka Vastu check karein photo aur sawaal se
             </span>
           </h1>
 
-          <p className="text-xs sm:text-sm text-stone-600 leading-relaxed max-w-xl mx-auto">
-            Room, wall, mirror, clock, bedroom, kitchen, bathroom ya main door ki photo upload karein aur AI se personalized, practical Vastu solution paaiye.
+          <p className="text-xs sm:text-sm text-stone-600 leading-relaxed max-w-2xl mx-auto">
+            Room, wall, mirror, clock, bedroom, kitchen, bathroom ya main door ki photo upload karein aur AI se personalized, practical Vastu Shastra guidance aur non-destructive remedies paaiye.
           </p>
 
           {/* 3 Primary Action Buttons */}
@@ -256,41 +256,213 @@ export const HomeDashboardView: React.FC<HomeDashboardViewProps> = ({
       {/* How It Works (3 Steps) */}
       <section className="bg-stone-50 rounded-3xl p-6 sm:p-8 border border-stone-200/80 space-y-6">
         <div className="text-center space-y-1">
-          <h3 className="font-heading font-bold text-xl text-stone-900">How VastuVision AI Works</h3>
+          <h2 className="font-heading font-bold text-xl sm:text-2xl text-stone-900">
+            How Ghar Ghar Vastu AI Works
+          </h2>
           <p className="text-xs text-stone-500">
-            Modern artificial intelligence grounded in classical Indian spatial principles
+            Modern artificial intelligence grounded in classical Vedic spatial principles
           </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="p-4 rounded-2xl bg-white border border-stone-200 space-y-2">
+          <div className="p-4 rounded-2xl bg-white border border-stone-200 space-y-2 shadow-2xs">
             <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-heading font-extrabold text-sm">
               1
             </div>
-            <h4 className="font-bold text-stone-900 text-sm">Upload Photo ya Sawaal</h4>
+            <h3 className="font-bold text-stone-900 text-sm">Upload Photo ya Sawaal</h3>
             <p className="text-xs text-stone-600 leading-relaxed">
               Take a picture of your bedroom, kitchen stove, mirror, or ask a question in Hindi, Hinglish, or English.
             </p>
           </div>
 
-          <div className="p-4 rounded-2xl bg-white border border-stone-200 space-y-2">
+          <div className="p-4 rounded-2xl bg-white border border-stone-200 space-y-2 shadow-2xs">
             <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-heading font-extrabold text-sm">
               2
             </div>
-            <h4 className="font-bold text-stone-900 text-sm">AI Visual & Direction Check</h4>
+            <h3 className="font-bold text-stone-900 text-sm">AI Visual & Direction Check</h3>
             <p className="text-xs text-stone-600 leading-relaxed">
               Gemini Vision identifies objects and room layout. If direction is critical, calibrate easily using the built-in phone compass.
             </p>
           </div>
 
-          <div className="p-4 rounded-2xl bg-white border border-stone-200 space-y-2">
+          <div className="p-4 rounded-2xl bg-white border border-stone-200 space-y-2 shadow-2xs">
             <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-heading font-extrabold text-sm">
               3
             </div>
-            <h4 className="font-bold text-stone-900 text-sm">Practical Non-Structural Fixes</h4>
+            <h3 className="font-bold text-stone-900 text-sm">Practical Non-Structural Fixes</h3>
             <p className="text-xs text-stone-600 leading-relaxed">
               Receive gentle, constructive suggestions: shifting decor, curtain remedies, or lighting balance—no demolition required.
             </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Public Vastu Guides & Topics (Crawlable SEO Directory) */}
+      <section className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="font-heading font-bold text-xl text-stone-900">
+              Essential Vastu Guides for Home & Flats
+            </h2>
+            <p className="text-xs text-stone-500">
+              In-depth research on cardinal directions, room placements, and practical remedies
+            </p>
+          </div>
+          <a
+            href="/blog"
+            onClick={(e) => {
+              e.preventDefault();
+              if (typeof window !== 'undefined' && window.history?.pushState) {
+                window.history.pushState(null, '', '/blog');
+                window.dispatchEvent(new PopStateEvent('popstate'));
+              }
+              onNavigate('blog');
+            }}
+            className="text-xs font-bold text-amber-700 hover:text-amber-800 flex items-center gap-1 shrink-0"
+          >
+            All Articles & Guides <ArrowRight className="w-3.5 h-3.5" />
+          </a>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
+          {[
+            {
+              title: 'Vastu Shastra Principles',
+              hindi: 'वास्तु शास्त्र नियम',
+              path: '/vastu-shastra',
+              desc: 'Vedic foundations of spatial science, Panchabhutas, and modern architecture.',
+              tag: 'Fundamentals',
+            },
+            {
+              title: 'Vastu for Home Layout',
+              hindi: 'घर का संपूर्ण वास्तु',
+              path: '/vastu-for-home',
+              desc: 'Room-by-room layout for independent houses, flats, and apartments.',
+              tag: 'House Plan',
+            },
+            {
+              title: 'Main Door Vastu',
+              hindi: 'मुख्य द्वार वास्तु',
+              path: '/main-door-vastu',
+              desc: 'Entrance directions (Simha Dwara), threshold rules, and door remedies.',
+              tag: 'Entrance',
+            },
+            {
+              title: 'Bedroom Vastu Guide',
+              hindi: 'बेडरूम और सोने की दिशा',
+              path: '/bedroom-vastu',
+              desc: 'Scientific sleeping directions (head to South/East) and bed placement.',
+              tag: 'Rest & Health',
+            },
+            {
+              title: 'Kitchen Vastu & Stove',
+              hindi: 'रसोई और गैस चूल्हा',
+              path: '/kitchen-vastu',
+              desc: 'South-East Agni Kon guidelines, stove and sink separation rules.',
+              tag: 'Agni Element',
+            },
+            {
+              title: 'Bathroom & Toilet Vastu',
+              hindi: 'बाथरूम और टॉयलेट दिशा',
+              path: '/bathroom-vastu',
+              desc: 'North-West elimination zones, drainage slopes, and salt remedies.',
+              tag: 'Drainage',
+            },
+            {
+              title: 'Mirror Vastu Rules',
+              hindi: 'आईने की सही दिशा',
+              path: '/mirror-vastu',
+              desc: 'Why mirrors must not reflect beds; ideal North and East wall placements.',
+              tag: 'Light & Reflection',
+            },
+            {
+              title: '8 Vastu Directions & Compass',
+              hindi: '8 दिशाएं और कम्पास',
+              path: '/vastu-direction',
+              desc: 'Ishan, Agni, Nairutya, Vayavya, and central Brahmasthan zoning.',
+              tag: 'Compass',
+            },
+            {
+              title: 'Practical Vastu Tips',
+              hindi: 'सरल वास्तु उपाय',
+              path: '/vastu-tips',
+              desc: 'Non-destructive solutions for wall clocks, indoor plants, and decor.',
+              tag: 'Quick Remedies',
+            },
+          ].map((guide, idx) => (
+            <a
+              key={idx}
+              href={guide.path}
+              onClick={(e) => {
+                e.preventDefault();
+                if (typeof window !== 'undefined' && window.history?.pushState) {
+                  window.history.pushState(null, '', guide.path);
+                  window.dispatchEvent(new PopStateEvent('popstate'));
+                }
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="p-4 rounded-2xl bg-white border border-stone-200/90 hover:border-amber-400 hover:shadow-xs cursor-pointer transition-all space-y-2 flex flex-col justify-between group"
+            >
+              <div>
+                <div className="flex items-center justify-between text-[11px] text-amber-700 font-bold mb-1">
+                  <span>{guide.tag}</span>
+                  <span className="text-stone-400 font-normal">{guide.hindi}</span>
+                </div>
+                <h3 className="font-heading font-bold text-sm text-stone-900 group-hover:text-amber-700 transition-colors">
+                  {guide.title}
+                </h3>
+                <p className="text-xs text-stone-500 mt-1 line-clamp-2 leading-relaxed">
+                  {guide.desc}
+                </p>
+              </div>
+
+              <div className="pt-2 border-t border-stone-100 flex items-center justify-between text-[11px] text-amber-700 font-bold">
+                <span>Read Full Guide</span>
+                <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </a>
+          ))}
+        </div>
+      </section>
+
+      {/* Crawlable Informational Section: What is Ghar Ghar Vastu & FAQs */}
+      <section className="p-6 sm:p-8 rounded-3xl bg-white border border-stone-200/80 shadow-2xs space-y-6">
+        <div className="space-y-2">
+          <h2 className="text-xl sm:text-2xl font-heading font-extrabold text-stone-900">
+            About Ghar Ghar Vastu – Your Trusted AI Vastu Advisor
+          </h2>
+          <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">
+            <strong>Ghar Ghar Vastu</strong> is an authentic Indian AI Vastu consultation platform built to make classical Vastu Shastra accessible, practical, and non-destructive for every modern household. We believe that your home should be an uplifting sanctuary of natural daylight, soothing ventilation, and emotional peace.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs sm:text-sm text-stone-600 leading-relaxed">
+          <div className="space-y-2 p-4 rounded-2xl bg-stone-50 border border-stone-200/70">
+            <h3 className="font-heading font-bold text-stone-900 text-sm">
+              Ghar ka Vastu Kaise Check Karein?
+            </h3>
+            <p>
+              Checking your home\'s Vastu with Ghar Ghar Vastu is fast and simple:
+            </p>
+            <ul className="list-disc pl-4 space-y-1 text-stone-600">
+              <li><strong>Upload a Photo:</strong> Take a photo of your bedroom, kitchen stove, main entrance, mirror, or bathroom.</li>
+              <li><strong>AI Directional Scan:</strong> Our Gemini AI vision scans item alignments and asks for compass confirmation if required.</li>
+              <li><strong>Non-Destructive Remedies:</strong> Receive actionable fixes like furniture shifts, color adjustments, or plant additions with zero demolition.</li>
+            </ul>
+          </div>
+
+          <div className="space-y-2 p-4 rounded-2xl bg-stone-50 border border-stone-200/70">
+            <h3 className="font-heading font-bold text-stone-900 text-sm">
+              Non-Destructive Vastu Remedies (बिना तोड़-फोड़ समाधान)
+            </h3>
+            <p>
+              Classical Vastu Shastra emphasizes element balancing (Panchabhuta Santulan) rather than breaking structures. If a room or item is placed in an unfavourable direction:
+            </p>
+            <ul className="list-disc pl-4 space-y-1 text-stone-600">
+              <li>Use <strong>color balancing</strong> (e.g. green or beige tones for kitchen counters).</li>
+              <li>Use <strong>rock salt crystals</strong> to absorb negative humidity in North-East bathrooms.</li>
+              <li>Cover mirrors facing beds during nighttime to prevent sleep disturbance.</li>
+            </ul>
           </div>
         </div>
       </section>
@@ -299,7 +471,7 @@ export const HomeDashboardView: React.FC<HomeDashboardViewProps> = ({
       <section className="p-5 rounded-2xl bg-amber-50/70 border border-amber-200/80 flex items-start gap-3 text-xs text-amber-950">
         <ShieldCheck className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
         <div className="space-y-1 leading-relaxed">
-          <div className="font-bold text-amber-900">VastuVision AI Philosophy & Peace of Mind</div>
+          <div className="font-bold text-amber-900">Ghar Ghar Vastu Philosophy & Peace of Mind</div>
           <p className="text-stone-700">
             We celebrate Indian Vastu as a harmonious philosophy of light, ventilation, and spatial rhythm. We strictly reject fear-mongering and fatalistic claims. Every recommendation is designed to bring calm and practical comfort to your living space.
           </p>

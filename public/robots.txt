@@ -1,7 +1,9 @@
 User-agent: *
 Allow: /
 Disallow: /admin
+Disallow: /admin/
 Disallow: /api/
-Disallow: /dashboard
+Disallow: /checkout
+Disallow: /checkout/
 
-Sitemap: https://vastuvision.ai/sitemap.xml
+Sitemap: https://ghargharvastu.com/sitemap.xml
