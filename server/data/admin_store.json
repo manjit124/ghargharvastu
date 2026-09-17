@@ -32,6 +32,17 @@
       "status": "active",
       "lastLogin": "2026-09-10T08:00:15.207Z",
       "createdAt": "2026-09-10T05:14:23.148Z"
+    },
+    {
+      "id": "admin_super_4",
+      "name": "Ghar Ghar Vastu Administrator",
+      "email": "admin@ghargharvastu.com",
+      "passwordHash": "$2b$10$jUrv7QPLfuQqaFKd6hxMOuSAK5td1WWJI2bToVHdCvYmRtiBxMhbK",
+      "salt": "",
+      "role": "SUPER_ADMIN",
+      "status": "active",
+      "lastLogin": null,
+      "createdAt": "2026-09-17T11:31:54.489Z"
     }
   ],
   "plans": [
@@ -2107,6 +2118,84 @@
     "rewardedDailyLimitReached": 0
   },
   "creditLedger": [
+    {
+      "id": "tx_1789651837632_730",
+      "userId": "guest_423a2509360ef88f",
+      "userName": "Vastu Homeowner",
+      "userEmail": "user_guest_423a2509360ef88f@ghargharvastu.com",
+      "transactionId": "trial_guest_423a2509360ef88f",
+      "type": "FREE_TRIAL",
+      "amount": 0,
+      "balanceBefore": 0,
+      "balanceAfter": 0,
+      "reason": "New User Free Trial initiated: 5 Chat Minutes + 5 Photo Analyses",
+      "createdAt": "2026-09-17T13:30:37.632Z"
+    },
+    {
+      "id": "tx_1789651252255_387",
+      "userId": "guest_22f2adf148cad87c",
+      "userName": "Vastu Homeowner",
+      "userEmail": "user_guest_22f2adf148cad87c@ghargharvastu.com",
+      "transactionId": "trial_guest_22f2adf148cad87c",
+      "type": "FREE_TRIAL",
+      "amount": 0,
+      "balanceBefore": 0,
+      "balanceAfter": 0,
+      "reason": "New User Free Trial initiated: 5 Chat Minutes + 5 Photo Analyses",
+      "createdAt": "2026-09-17T13:20:52.255Z"
+    },
+    {
+      "id": "tx_1789651088956_225",
+      "userId": "guest_aba6978d796955c5",
+      "userName": "Vastu Homeowner",
+      "userEmail": "user_guest_aba6978d796955c5@ghargharvastu.com",
+      "transactionId": "trial_guest_aba6978d796955c5",
+      "type": "FREE_TRIAL",
+      "amount": 0,
+      "balanceBefore": 0,
+      "balanceAfter": 0,
+      "reason": "New User Free Trial initiated: 5 Chat Minutes + 5 Photo Analyses",
+      "createdAt": "2026-09-17T13:18:08.956Z"
+    },
+    {
+      "id": "tx_1789650747490_895",
+      "userId": "guest_85fe4f3289c26db6",
+      "userName": "Vastu Homeowner",
+      "userEmail": "user_guest_85fe4f3289c26db6@ghargharvastu.com",
+      "transactionId": "trial_guest_85fe4f3289c26db6",
+      "type": "FREE_TRIAL",
+      "amount": 0,
+      "balanceBefore": 0,
+      "balanceAfter": 0,
+      "reason": "New User Free Trial initiated: 5 Chat Minutes + 5 Photo Analyses",
+      "createdAt": "2026-09-17T13:12:27.490Z"
+    },
+    {
+      "id": "tx_1789648676152_101",
+      "userId": "guest_5ed46ee92aeae6d9",
+      "userName": "Vastu Homeowner",
+      "userEmail": "user_guest_5ed46ee92aeae6d9@ghargharvastu.com",
+      "transactionId": "trial_guest_5ed46ee92aeae6d9",
+      "type": "FREE_TRIAL",
+      "amount": 0,
+      "balanceBefore": 0,
+      "balanceAfter": 0,
+      "reason": "New User Free Trial initiated: 5 Chat Minutes + 5 Photo Analyses",
+      "createdAt": "2026-09-17T12:37:56.152Z"
+    },
+    {
+      "id": "tx_1789644718523_966",
+      "userId": "guest_4975d11ebde0a622",
+      "userName": "Vastu Homeowner",
+      "userEmail": "user_guest_4975d11ebde0a622@ghargharvastu.com",
+      "transactionId": "trial_guest_4975d11ebde0a622",
+      "type": "FREE_TRIAL",
+      "amount": 0,
+      "balanceBefore": 0,
+      "balanceAfter": 0,
+      "reason": "New User Free Trial initiated: 5 Chat Minutes + 5 Photo Analyses",
+      "createdAt": "2026-09-17T11:31:58.523Z"
+    },
     {
       "id": "tx_1789557325908_982",
       "userId": "usr_g_1789557325907_561",
@@ -5595,6 +5684,126 @@
       "createdAt": "2026-09-16T11:15:25.908Z",
       "updatedAt": "2026-09-16T11:15:27.239Z",
       "preferredLanguage": "hi"
+    },
+    {
+      "userId": "guest_4975d11ebde0a622",
+      "userName": "Vastu Homeowner",
+      "userEmail": "user_guest_4975d11ebde0a622@ghargharvastu.com",
+      "plan": "free",
+      "freeChatMinutesRemaining": 5,
+      "freePhotosRemaining": 5,
+      "creditsBalance": 0,
+      "totalSpentCredits": 0,
+      "trialAbuseDetected": false,
+      "todayUsage": {
+        "date": "2026-09-17",
+        "aiRequestsCount": 0,
+        "imageAnalysesCount": 0,
+        "homeScansCount": 0,
+        "adsWatchedCount": 0
+      },
+      "createdAt": "2026-09-17T11:31:58.523Z",
+      "updatedAt": "2026-09-17T11:31:58.523Z"
+    },
+    {
+      "userId": "guest_5ed46ee92aeae6d9",
+      "userName": "Vastu Homeowner",
+      "userEmail": "user_guest_5ed46ee92aeae6d9@ghargharvastu.com",
+      "plan": "free",
+      "freeChatMinutesRemaining": 5,
+      "freePhotosRemaining": 5,
+      "creditsBalance": 0,
+      "totalSpentCredits": 0,
+      "trialAbuseDetected": false,
+      "todayUsage": {
+        "date": "2026-09-17",
+        "aiRequestsCount": 0,
+        "imageAnalysesCount": 0,
+        "homeScansCount": 0,
+        "adsWatchedCount": 0
+      },
+      "createdAt": "2026-09-17T12:37:56.152Z",
+      "updatedAt": "2026-09-17T12:37:56.152Z"
+    },
+    {
+      "userId": "guest_85fe4f3289c26db6",
+      "userName": "Vastu Homeowner",
+      "userEmail": "user_guest_85fe4f3289c26db6@ghargharvastu.com",
+      "plan": "free",
+      "freeChatMinutesRemaining": 5,
+      "freePhotosRemaining": 5,
+      "creditsBalance": 0,
+      "totalSpentCredits": 0,
+      "trialAbuseDetected": false,
+      "todayUsage": {
+        "date": "2026-09-17",
+        "aiRequestsCount": 0,
+        "imageAnalysesCount": 0,
+        "homeScansCount": 0,
+        "adsWatchedCount": 0
+      },
+      "createdAt": "2026-09-17T13:12:27.490Z",
+      "updatedAt": "2026-09-17T13:12:27.490Z"
+    },
+    {
+      "userId": "guest_aba6978d796955c5",
+      "userName": "Vastu Homeowner",
+      "userEmail": "user_guest_aba6978d796955c5@ghargharvastu.com",
+      "plan": "free",
+      "freeChatMinutesRemaining": 5,
+      "freePhotosRemaining": 5,
+      "creditsBalance": 0,
+      "totalSpentCredits": 0,
+      "trialAbuseDetected": false,
+      "todayUsage": {
+        "date": "2026-09-17",
+        "aiRequestsCount": 0,
+        "imageAnalysesCount": 0,
+        "homeScansCount": 0,
+        "adsWatchedCount": 0
+      },
+      "createdAt": "2026-09-17T13:18:08.956Z",
+      "updatedAt": "2026-09-17T13:18:08.956Z"
+    },
+    {
+      "userId": "guest_22f2adf148cad87c",
+      "userName": "Vastu Homeowner",
+      "userEmail": "user_guest_22f2adf148cad87c@ghargharvastu.com",
+      "plan": "free",
+      "freeChatMinutesRemaining": 5,
+      "freePhotosRemaining": 5,
+      "creditsBalance": 0,
+      "totalSpentCredits": 0,
+      "trialAbuseDetected": false,
+      "todayUsage": {
+        "date": "2026-09-17",
+        "aiRequestsCount": 0,
+        "imageAnalysesCount": 0,
+        "homeScansCount": 0,
+        "adsWatchedCount": 0
+      },
+      "createdAt": "2026-09-17T13:20:52.255Z",
+      "updatedAt": "2026-09-17T13:20:52.255Z"
+    },
+    {
+      "userId": "guest_423a2509360ef88f",
+      "userName": "Vastu Homeowner",
+      "userEmail": "user_guest_423a2509360ef88f@ghargharvastu.com",
+      "plan": "free",
+      "freeChatMinutesRemaining": 4,
+      "freePhotosRemaining": 5,
+      "creditsBalance": 0,
+      "totalSpentCredits": 0,
+      "trialAbuseDetected": false,
+      "todayUsage": {
+        "date": "2026-09-17",
+        "aiRequestsCount": 1,
+        "imageAnalysesCount": 0,
+        "homeScansCount": 0,
+        "adsWatchedCount": 0
+      },
+      "createdAt": "2026-09-17T13:30:37.632Z",
+      "updatedAt": "2026-09-17T13:30:37.632Z"
     }
   ],
   "rewardTransactionTokens": [
@@ -5610,12 +5819,12 @@
     "monthlyRequestLimit": 100000,
     "dailyBudgetThresholdUSD": 50,
     "monthlyBudgetThresholdUSD": 1000,
-    "todayRequestCount": 0,
-    "todayResetDate": "2026-09-16",
-    "monthRequestCount": 0,
+    "todayRequestCount": 1,
+    "todayResetDate": "2026-09-17",
+    "monthRequestCount": 1,
     "monthResetDate": "2026-09",
     "totalTokensUsed": 0,
-    "textRequestsCount": 0,
+    "textRequestsCount": 1,
     "imageAnalysisCount": 0,
     "roomScanCount": 0,
     "homeScanCount": 0,
@@ -5624,10 +5833,15 @@
     "rateLimitedCount": 0,
     "unauthorizedRejectedCount": 0,
     "creditsConsumed": 0,
-    "freeUsageCount": 0,
+    "freeUsageCount": 1,
     "paidUsageCount": 0,
     "estimatedCostUSD": 0
   },
-  "ipHashMappings": [],
+  "ipHashMappings": [
+    [
+      "a624c93629a01596df9f78e9",
+      "guest_423a2509360ef88f"
+    ]
+  ],
   "securityEvents": []
 }

@@ -209,9 +209,9 @@ export function getOrCreateSessionForClient(
 }
 
 /**
- * Strict authentication middleware for all protected VastuVision AI routes.
- * Verifies signed session token. Rejects unauthenticated requests with HTTP 401.
- * Completely eliminates reliance on client-provided x-user-id or localStorage.
+ * Middleware ensuring a valid session exists (either registered user or guest).
+ * Allows visitors to use free AI features (chat, photo analysis, room scan, etc.)
+ * backed by the existing free-credit system and IP tracking.
  */
 export function requireUserSession(
   req: AuthenticatedUserRequest,
@@ -221,23 +221,45 @@ export function requireUserSession(
   const token = extractSessionToken(req);
   if (token) {
     const session = verifySessionToken(token);
-    if (session && !session.isGuest) {
+    if (session) {
       req.userSession = session;
       req.authoritativeUserId = session.userId;
       return next();
     }
-    // Token was forged, expired, or guest session
-    adminStore.recordSecurityEvent({
-      type: 'INVALID_TOKEN',
-      severity: 'warning',
-      ip: getClientIp(req),
-      details: `Invalid or unauthenticated session token presented to ${req.path}`,
-    });
   }
 
-  // Reject unauthenticated requests with 401 Unauthorized
+  // If no token or invalid, automatically issue or retrieve guest session anchored to client IP
+  const { session } = getOrCreateSessionForClient(req, res);
+  req.userSession = session;
+  req.authoritativeUserId = session.userId;
+  return next();
+}
+
+/**
+ * Strict authentication middleware: Requires a REAL, registered, logged-in user account.
+ * Used for paid subscriptions, Razorpay order creation, payment verification, and profile management.
+ * Guest sessions are rejected with HTTP 401 UNAUTHENTICATED.
+ */
+export function requireRegisteredUser(
+  req: AuthenticatedUserRequest,
+  res: Response,
+  next: NextFunction
+) {
+  const token = extractSessionToken(req);
+  if (token) {
+    const session = verifySessionToken(token);
+    if (session && !session.isGuest && session.userId && !session.userId.startsWith('guest_')) {
+      req.userSession = session;
+      req.authoritativeUserId = session.userId;
+      return next();
+    }
+  }
+
+  // Reject unauthenticated or guest requests with 401 Unauthorized
   return res.status(401).json({
-    error: 'Authentication required. Please log in or create an account to access VastuVision AI.',
+    success: false,
     code: 'UNAUTHENTICATED',
+    error: 'AUTHENTICATION_REQUIRED',
+    message: 'Subscription continue karne ke liye account me login karein',
   });
 }

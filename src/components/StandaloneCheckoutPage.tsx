@@ -14,6 +14,8 @@ import {
 import { creditService } from '../services/creditService';
 import { UserCreditAccount } from '../types';
 import { authService } from '../services/authService';
+import { analyticsService } from '../services/analyticsService';
+import { AuthGate } from './auth/AuthGate';
 
 interface StandaloneCheckoutPageProps {
   onBackToApp: () => void;
@@ -21,6 +23,7 @@ interface StandaloneCheckoutPageProps {
 
 export const StandaloneCheckoutPage: React.FC<StandaloneCheckoutPageProps> = ({ onBackToApp }) => {
   const [planId, setPlanId] = useState<'pro' | 'expert'>('pro');
+  const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);
   const [account, setAccount] = useState<UserCreditAccount | null>(null);
   const [orderData, setOrderData] = useState<{
     orderId: string;
@@ -75,6 +78,9 @@ export const StandaloneCheckoutPage: React.FC<StandaloneCheckoutPageProps> = ({ 
 
     // Preload Razorpay SDK script
     loadRazorpayScript();
+
+    // Track pricing / checkout page view
+    analyticsService.trackPricingPageView('standalone_checkout');
   }, []);
 
   const loadRazorpayScript = (): Promise<boolean> => {
@@ -156,6 +162,12 @@ export const StandaloneCheckoutPage: React.FC<StandaloneCheckoutPageProps> = ({ 
   };
 
   const handleLaunchPayment = useCallback(async () => {
+    // If user is not authenticated, prompt login first
+    if (!authService.isAuthenticated()) {
+      setIsAuthOpen(true);
+      return;
+    }
+
     setErrorMessage(null);
     setStatus('creating_order');
     setStatusMessage('Generating secure Razorpay order...');
@@ -174,6 +186,11 @@ export const StandaloneCheckoutPage: React.FC<StandaloneCheckoutPageProps> = ({ 
       );
 
       if (!orderRes.success || !orderRes.orderId || !orderRes.keyId) {
+        if ((orderRes as any).code === 'UNAUTHENTICATED' || orderRes.error === 'AUTHENTICATION_REQUIRED') {
+          setStatus('idle');
+          setIsAuthOpen(true);
+          return;
+        }
         setStatus('failed');
         setErrorMessage(orderRes.message || orderRes.error || 'Failed to create payment order.');
         return;
@@ -189,6 +206,10 @@ export const StandaloneCheckoutPage: React.FC<StandaloneCheckoutPageProps> = ({ 
 
       setStatus('ready');
       setStatusMessage('Opening Razorpay Checkout...');
+
+      // Track checkout started
+      analyticsService.trackSubscriptionPlanSelected(planInfo.name, finalPrice);
+      analyticsService.trackCheckoutStarted(planInfo.name, finalPrice);
 
       const options = {
         key: orderRes.keyId,
@@ -211,6 +232,7 @@ export const StandaloneCheckoutPage: React.FC<StandaloneCheckoutPageProps> = ({ 
 
             if (verifyRes.success) {
               console.log('[StandaloneCheckout] Payment verified successfully on server!');
+              analyticsService.trackPaymentSuccess(planInfo.name, finalPrice);
               setStatus('success');
               setStatusMessage('Payment verified! Plan activated.');
               setVerifiedSub(verifyRes);
@@ -250,6 +272,7 @@ export const StandaloneCheckoutPage: React.FC<StandaloneCheckoutPageProps> = ({ 
               // Fetch updated account state
               creditService.fetchCredits().then((data) => setAccount(data?.account || (data as any)));
             } else {
+              analyticsService.trackPaymentFailed(planInfo.name, finalPrice, 'verification_failed');
               setStatus('failed');
               setErrorMessage(
                 verifyRes.message ||
@@ -279,6 +302,7 @@ export const StandaloneCheckoutPage: React.FC<StandaloneCheckoutPageProps> = ({ 
           ondismiss: () => {
             console.log('[StandaloneCheckout] Razorpay modal dismissed by user');
             if (status !== 'success') {
+              analyticsService.trackPaymentFailed(planInfo.name, finalPrice, 'user_dismissed');
               setStatus('idle');
               setStatusMessage('');
             }
@@ -291,6 +315,7 @@ export const StandaloneCheckoutPage: React.FC<StandaloneCheckoutPageProps> = ({ 
       const rzp = new (window as any).Razorpay(options);
       rzp.on('payment.failed', (resp: any) => {
         console.error('[StandaloneCheckout] Payment failed callback:', resp);
+        analyticsService.trackPaymentFailed(planInfo.name, finalPrice, 'payment_declined');
         setStatus('failed');
         setErrorMessage(
           resp.error?.description ||
@@ -546,10 +571,29 @@ export const StandaloneCheckoutPage: React.FC<StandaloneCheckoutPageProps> = ({ 
 
         {/* Footer info */}
         <div className="text-center text-xs text-stone-500 space-y-1">
-          <p>© VastuVision AI. Indian Architectural Intelligence.</p>
+          <p>© Ghar Ghar Vastu. Indian Architectural Intelligence.</p>
           <p className="text-[10px]">Razorpay Payment Gateway Integration with Backend Cryptographic Verification</p>
         </div>
       </div>
+
+      {/* Auth Modal for Subscription Purchase */}
+      {isAuthOpen && (
+        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-3 overflow-y-auto animate-in fade-in duration-150">
+          <div className="w-full max-w-md my-auto">
+            <AuthGate
+              asModal={true}
+              contextMessage="Subscription continue karne ke liye account me login karein"
+              onClose={() => setIsAuthOpen(false)}
+              onAuthenticated={() => {
+                setIsAuthOpen(false);
+                setTimeout(() => {
+                  handleLaunchPayment();
+                }, 150);
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -26,6 +26,7 @@ import { DIRECTION_NAMES } from '../data/vastuKnowledge';
 import { compressImageIfNeeded } from '../utils/imageUtils';
 import { getStoredUserId, creditService } from '../services/creditService';
 import { authService } from '../services/authService';
+import { analyticsService } from '../services/analyticsService';
 import { LanguageSelector } from './LanguageSelector';
 import {
   AppLanguage,
@@ -145,6 +146,11 @@ export const PhotoAnalysisView: React.FC<PhotoAnalysisViewProps> = ({
       setLoadingStepIndex((prev) => (prev + 1) % LOADING_STEPS.length);
     }, 1200);
 
+    // Track image analysis started (safe non-sensitive metadata only)
+    analyticsService.trackImageAnalysisStarted(
+      roomHint === 'Auto Detect' ? 'auto_detect' : roomHint || 'room_photo'
+    );
+
     try {
       const userId = getStoredUserId();
       const response = await fetch('/api/analyze-photo', {
@@ -197,6 +203,9 @@ export const PhotoAnalysisView: React.FC<PhotoAnalysisViewProps> = ({
       data.timestamp = Date.now();
       data.id = 'pa_' + Date.now();
       setAnalysisResult(data);
+
+      // Track image analysis completed (safe non-sensitive metadata only)
+      analyticsService.trackImageAnalysisCompleted(data.roomType || roomHint || 'room');
 
       // Refresh remaining user credits
       creditService.fetchCredits().catch(() => {});

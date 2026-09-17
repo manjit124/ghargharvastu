@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { SeoTopicPageData } from '../data/seoPagesData';
+import { SeoTopicPageData, SEO_TOPIC_PAGES } from '../data/seoPagesData';
 import {
   Compass,
   ArrowRight,
@@ -16,29 +16,61 @@ import {
 } from 'lucide-react';
 
 interface SeoTopicPageViewProps {
-  topic: SeoTopicPageData;
-  onNavigate: (view: string) => void;
-  onAskQuestion: (query: string) => void;
-  onUploadPhotoForCategory: (categoryName: string) => void;
+  topic?: SeoTopicPageData;
+  slug?: string;
+  onNavigate?: (view: string) => void;
+  onAskQuestion?: (query: string) => void;
+  onUploadPhotoForCategory?: (categoryName: string) => void;
+  onStartAnalysis?: (categoryName: string) => void;
 }
 
 export const SeoTopicPageView: React.FC<SeoTopicPageViewProps> = ({
-  topic,
+  topic: propTopic,
+  slug,
   onNavigate,
   onAskQuestion,
   onUploadPhotoForCategory,
+  onStartAnalysis,
 }) => {
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
 
+  const topic: SeoTopicPageData | undefined =
+    propTopic ||
+    (slug && SEO_TOPIC_PAGES[slug]) ||
+    SEO_TOPIC_PAGES['vastu-shastra'];
+
+  const handlePhotoUpload = (categoryName: string) => {
+    if (onUploadPhotoForCategory) {
+      onUploadPhotoForCategory(categoryName);
+    } else if (onStartAnalysis) {
+      onStartAnalysis(categoryName);
+    }
+  };
+
+  const handleAsk = (query: string) => {
+    if (onAskQuestion) {
+      onAskQuestion(query);
+    }
+  };
+
+  const handleNav = (view: string) => {
+    if (onNavigate) {
+      onNavigate(view);
+    } else if (typeof window !== 'undefined' && window.history?.pushState) {
+      window.history.pushState(null, '', '/');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    }
+  };
+
   useEffect(() => {
-    if (typeof document === 'undefined') return;
-    document.title = topic.title;
+    if (typeof document === 'undefined' || !topic) return;
+    document.title = topic.title || 'Ghar Ghar Vastu';
 
     const metaDesc = document.querySelector('meta[name="description"]');
-    if (metaDesc) metaDesc.setAttribute('content', topic.metaDescription);
+    if (metaDesc && topic.metaDescription) metaDesc.setAttribute('content', topic.metaDescription);
 
     let canonical = document.querySelector('link[rel="canonical"]');
-    const canonicalUrl = `https://ghargharvastu.com${topic.path}`;
+    const canonicalUrl = `https://ghargharvastu.com${topic.path || ''}`;
     if (canonical) {
       canonical.setAttribute('href', canonicalUrl);
     } else {
@@ -52,21 +84,35 @@ export const SeoTopicPageView: React.FC<SeoTopicPageViewProps> = ({
     if (ogUrl) ogUrl.setAttribute('content', canonicalUrl);
 
     const ogTitle = document.querySelector('meta[property="og:title"]');
-    if (ogTitle) ogTitle.setAttribute('content', topic.title);
+    if (ogTitle && topic.title) ogTitle.setAttribute('content', topic.title);
 
     const ogDesc = document.querySelector('meta[property="og:description"]');
-    if (ogDesc) ogDesc.setAttribute('content', topic.metaDescription);
+    if (ogDesc && topic.metaDescription) ogDesc.setAttribute('content', topic.metaDescription);
   }, [topic]);
 
   const toggleFaq = (idx: number) => {
     setOpenFaqIndex(openFaqIndex === idx ? null : idx);
   };
 
+  if (!topic) {
+    return (
+      <div className="p-8 text-center text-stone-600">
+        <p>Vastu topic guide not found.</p>
+      </div>
+    );
+  }
+
+  const faqList = Array.isArray(topic.faq) ? topic.faq : [];
+  const idealDirections = Array.isArray(topic.idealDirections) ? topic.idealDirections : [];
+  const goldenPrinciples = Array.isArray(topic.goldenPrinciples) ? topic.goldenPrinciples : [];
+  const commonMistakes = Array.isArray(topic.commonMistakes) ? topic.commonMistakes : [];
+  const internalLinks = Array.isArray(topic.internalLinks) ? topic.internalLinks : [];
+
   // Structured data for rich search engine indexing
   const faqSchema = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
-    mainEntity: topic.faq.map((item) => ({
+    mainEntity: faqList.map((item) => ({
       '@type': 'Question',
       name: item.question,
       acceptedAnswer: {
@@ -115,7 +161,7 @@ export const SeoTopicPageView: React.FC<SeoTopicPageViewProps> = ({
             if (typeof window !== 'undefined' && window.history?.pushState) {
               window.history.pushState(null, '', '/');
             }
-            onNavigate('home');
+            handleNav('home');
           }}
           className="hover:text-amber-800 transition-colors flex items-center gap-1 shrink-0 font-medium"
         >
@@ -152,7 +198,7 @@ export const SeoTopicPageView: React.FC<SeoTopicPageViewProps> = ({
         <div className="flex flex-wrap items-center gap-3 pt-3">
           <button
             type="button"
-            onClick={() => onAskQuestion(topic.ctaQuery)}
+            onClick={() => handleAsk(topic.ctaQuery)}
             className="px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-amber-600/25 flex items-center gap-2 transition-all active:scale-98"
           >
             <MessageSquare className="w-4 h-4 shrink-0" />
@@ -160,7 +206,7 @@ export const SeoTopicPageView: React.FC<SeoTopicPageViewProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => onUploadPhotoForCategory(topic.h1.split(':')[0])}
+            onClick={() => handlePhotoUpload(topic.h1.split(':')[0])}
             className="px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl bg-white hover:bg-stone-50 border border-stone-200 text-stone-900 font-bold text-xs sm:text-sm flex items-center gap-2 shadow-2xs transition-all active:scale-98"
           >
             <Camera className="w-4 h-4 text-amber-600 shrink-0" />
@@ -192,8 +238,8 @@ export const SeoTopicPageView: React.FC<SeoTopicPageViewProps> = ({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-          {topic.idealDirections.map((dir, idx) => {
-            const isBest = dir.verdict === 'Best' || dir.verdict === 'Best for Toilet';
+          {idealDirections.map((dir, idx) => {
+            const isBest = dir.verdict === 'Best';
             const isAvoid = dir.verdict === 'Avoid';
             return (
               <div
@@ -238,7 +284,7 @@ export const SeoTopicPageView: React.FC<SeoTopicPageViewProps> = ({
         </div>
 
         <div className="space-y-3">
-          {topic.goldenPrinciples.map((rule, idx) => (
+          {goldenPrinciples.map((rule, idx) => (
             <div
               key={idx}
               className="p-4 sm:p-5 rounded-2xl bg-white border border-stone-200/80 shadow-2xs space-y-2"
@@ -279,7 +325,7 @@ export const SeoTopicPageView: React.FC<SeoTopicPageViewProps> = ({
         </div>
 
         <div className="space-y-3">
-          {topic.commonMistakes.map((item, idx) => (
+          {commonMistakes.map((item, idx) => (
             <div
               key={idx}
               className="p-4 sm:p-5 rounded-2xl bg-white border border-stone-200/80 shadow-2xs space-y-3"
@@ -316,7 +362,7 @@ export const SeoTopicPageView: React.FC<SeoTopicPageViewProps> = ({
         </div>
 
         <div className="space-y-2.5">
-          {topic.faq.map((item, idx) => {
+          {faqList.map((item, idx) => {
             const isOpen = openFaqIndex === idx;
             return (
               <div
@@ -362,7 +408,7 @@ export const SeoTopicPageView: React.FC<SeoTopicPageViewProps> = ({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {topic.internalLinks.map((link, idx) => (
+          {internalLinks.map((link, idx) => (
             <a
               key={idx}
               href={link.path}
@@ -404,7 +450,7 @@ export const SeoTopicPageView: React.FC<SeoTopicPageViewProps> = ({
         <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
           <button
             type="button"
-            onClick={() => onAskQuestion(topic.ctaQuery)}
+            onClick={() => handleAsk(topic.ctaQuery)}
             className="px-5 py-3 rounded-2xl bg-white text-stone-900 hover:bg-stone-50 font-bold text-xs sm:text-sm shadow-md flex items-center gap-2 transition-all active:scale-98"
           >
             <MessageSquare className="w-4 h-4 text-amber-600" />
@@ -412,7 +458,7 @@ export const SeoTopicPageView: React.FC<SeoTopicPageViewProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => onUploadPhotoForCategory(topic.h1.split(':')[0])}
+            onClick={() => handlePhotoUpload(topic.h1.split(':')[0])}
             className="px-5 py-3 rounded-2xl bg-amber-800 hover:bg-amber-900 text-white font-bold text-xs sm:text-sm flex items-center gap-2 border border-amber-500/40 transition-all active:scale-98"
           >
             <Camera className="w-4 h-4" />

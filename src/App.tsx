@@ -25,6 +25,7 @@ import { setPreferredLanguage } from './services/languageService';
 import { SEO_TOPIC_PAGES } from './data/seoPagesData';
 import { SeoTopicPageView } from './components/SeoTopicPageView';
 import { BlogHubView } from './components/BlogHubView';
+import { analyticsService } from './services/analyticsService';
 
 const INITIAL_PROFILE: UserProfile = {
   id: '',
@@ -48,6 +49,7 @@ export default function App() {
   const [currentTopicSlug, setCurrentTopicSlug] = useState<string | null>(null);
   const [currentBlogSlug, setCurrentBlogSlug] = useState<string | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  const [authContextMessage, setAuthContextMessage] = useState<string | null>(null);
   const [pendingAuthAction, setPendingAuthAction] = useState<(() => void) | null>(null);
 
   const [isAdminActive, setIsAdminActive] = useState<boolean>(() => {
@@ -213,6 +215,47 @@ export default function App() {
     };
   }, []);
 
+  // GA4 SPA Page View Tracking
+  useEffect(() => {
+    if (isCheckoutActive) {
+      analyticsService.trackPageView('/checkout', 'Checkout - Ghar Ghar Vastu');
+      return;
+    }
+    if (isAdminActive) {
+      analyticsService.trackPageView('/admin', 'Admin Panel - Ghar Ghar Vastu');
+      return;
+    }
+    if (activeView === 'topic-page' && currentTopicSlug) {
+      analyticsService.trackPageView(
+        `/${currentTopicSlug}`,
+        `${currentTopicSlug.replace(/-/g, ' ')} - Ghar Ghar Vastu`
+      );
+      return;
+    }
+    if (activeView === 'blog') {
+      const blogPath = currentBlogSlug ? `/blog/${currentBlogSlug}` : '/blog';
+      analyticsService.trackPageView(
+        blogPath,
+        `${currentBlogSlug ? currentBlogSlug.replace(/-/g, ' ') : 'Blog'} - Ghar Ghar Vastu`
+      );
+      return;
+    }
+
+    const viewTitles: Record<string, string> = {
+      home: 'Ghar Ghar Vastu - AI Vastu Shastra Consultant',
+      chat: 'AI Vastu Advisor - Ghar Ghar Vastu',
+      'photo-analysis': 'Vastu Photo Analysis - Ghar Ghar Vastu',
+      scan: 'Room Compass Scan - Ghar Ghar Vastu',
+      explore: 'Explore Vastu Library - Ghar Ghar Vastu',
+      'all-rooms': 'Complete Home Scan - Ghar Ghar Vastu',
+      'colour-advisor': 'Vastu Colour Advisor - Ghar Ghar Vastu',
+      'object-placement': 'Vastu Object Placement - Ghar Ghar Vastu',
+    };
+    const path = activeView === 'home' ? '/' : `/${activeView}`;
+    const title = viewTitles[activeView] || 'Ghar Ghar Vastu';
+    analyticsService.trackPageView(path, title);
+  }, [activeView, currentTopicSlug, currentBlogSlug, isCheckoutActive, isAdminActive]);
+
   const [isCheckingAuth, setIsCheckingAuth] = useState<boolean>(true);
 
   // Synchronize session and user profile on mount
@@ -315,6 +358,20 @@ export default function App() {
     }
   }, [userProfile]);
 
+  // Sync GA4 User ID (internal non-PII ID only)
+  useEffect(() => {
+    if (userProfile.isLoggedIn && userProfile.id) {
+      analyticsService.setUserId(userProfile.id);
+    }
+  }, [userProfile.isLoggedIn, userProfile.id]);
+
+  // Track legal modal views
+  useEffect(() => {
+    if (legalModalType) {
+      analyticsService.trackPageView(`/${legalModalType}`, `${legalModalType.toUpperCase()} - Ghar Ghar Vastu`);
+    }
+  }, [legalModalType]);
+
   const handleUpdateProfile = (updated: Partial<UserProfile>) => {
     setUserProfile((prev) => ({ ...prev, ...updated }));
   };
@@ -334,16 +391,6 @@ export default function App() {
   };
 
   const handleAskQuestion = (query: string, img?: string) => {
-    if (!userProfile.isLoggedIn) {
-      setPendingAuthAction(() => () => {
-        setChatInitialPrompt(query);
-        setChatInitialImage(img);
-        setActiveView('chat');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      });
-      setIsAuthModalOpen(true);
-      return;
-    }
     setChatInitialPrompt(query);
     setChatInitialImage(img);
     setActiveView('chat');
@@ -351,15 +398,6 @@ export default function App() {
   };
 
   const handleUploadPhotoForCategory = (categoryName: string) => {
-    if (!userProfile.isLoggedIn) {
-      setPendingAuthAction(() => () => {
-        setPhotoAnalysisRoomHint(categoryName);
-        setActiveView('photo-analysis');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      });
-      setIsAuthModalOpen(true);
-      return;
-    }
     setPhotoAnalysisRoomHint(categoryName);
     setActiveView('photo-analysis');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -387,21 +425,13 @@ export default function App() {
       return;
     }
 
-    if (['photo-analysis', 'scan-room', 'chat', 'complete-home'].includes(view) && !userProfile.isLoggedIn) {
-      setPendingAuthAction(() => () => {
-        setActiveView(view);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      });
-      setIsAuthModalOpen(true);
-      return;
-    }
-
     setActiveView(view);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleOpenProfile = () => {
     if (!userProfile.isLoggedIn) {
+      setAuthContextMessage(null);
       setIsAuthModalOpen(true);
     } else {
       setIsProfileOpen(true);
@@ -540,8 +570,11 @@ export default function App() {
         {activeView === 'topic-page' && currentTopicSlug && (
           <SeoTopicPageView
             slug={currentTopicSlug}
+            topic={SEO_TOPIC_PAGES[currentTopicSlug]}
+            onNavigate={handleNavigate}
             onAskQuestion={handleAskQuestion}
             onStartAnalysis={handleUploadPhotoForCategory}
+            onUploadPhotoForCategory={handleUploadPhotoForCategory}
           />
         )}
 
@@ -775,6 +808,12 @@ export default function App() {
       <MonetizationModal
         isOpen={isMonetizationOpen}
         onClose={() => setIsMonetizationOpen(false)}
+        userProfile={userProfile}
+        onRequestAuth={(onSuccessAction) => {
+          setPendingAuthAction(() => onSuccessAction);
+          setAuthContextMessage('Subscription continue karne ke liye account me login karein');
+          setIsAuthModalOpen(true);
+        }}
       />
 
       {/* Legal & Trust Modals */}
@@ -785,9 +824,12 @@ export default function App() {
         <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-3 overflow-y-auto animate-in fade-in duration-150">
           <div className="w-full max-w-md my-auto">
             <AuthGate
+              asModal={true}
+              contextMessage={authContextMessage || undefined}
               onClose={() => {
                 setIsAuthModalOpen(false);
                 setPendingAuthAction(null);
+                setAuthContextMessage(null);
               }}
               onAuthenticated={(authData) => {
                 setUserProfile((prev) => ({
@@ -811,9 +853,13 @@ export default function App() {
                   setPreferredLanguage(authData.user.preferredLanguage);
                 }
                 setIsAuthModalOpen(false);
+                setAuthContextMessage(null);
                 if (pendingAuthAction) {
-                  pendingAuthAction();
+                  const action = pendingAuthAction;
                   setPendingAuthAction(null);
+                  setTimeout(() => {
+                    action();
+                  }, 150);
                 }
               }}
             />

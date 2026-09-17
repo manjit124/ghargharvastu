@@ -34,6 +34,7 @@ import {
   getPreferredLanguage,
   onLanguageChange,
 } from '../services/languageService';
+import { analyticsService } from '../services/analyticsService';
 
 interface AiChatViewProps {
   initialPrompt?: string;
@@ -128,6 +129,7 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
   const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
+    analyticsService.trackAiVastuAdvisorOpen('chat_view');
     return () => {
       abortControllerRef.current?.abort();
     };
@@ -348,6 +350,16 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
     setInputText('');
     const tempImage = attachedImage;
     setAttachedImage(null);
+
+    // Track AI question submission event (safe non-sensitive parameters only)
+    const inputType = tempImage
+      ? 'multimodal'
+      : isListening
+      ? 'voice'
+      : textToSend !== undefined
+      ? 'quick_prompt'
+      : 'text';
+    analyticsService.trackAiQuestionSubmitted(inputType);
 
     await executeChatRequest(query, tempImage, selectedDirection, 0);
   };

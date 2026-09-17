@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { authService, AuthSuccessResponse, AuthSessionResponse } from '../../services/authService';
 import { setPreferredLanguage, AppLanguage } from '../../services/languageService';
+import { analyticsService } from '../../services/analyticsService';
 import {
   signInWithGoogleViaFirebase,
   signInWithGoogleViaFirebaseRedirect,
@@ -38,13 +39,24 @@ declare global {
 interface AuthGateProps {
   onAuthenticated: (authData: AuthSuccessResponse) => void;
   onClose?: () => void;
+  title?: string;
+  subtitle?: string;
+  contextMessage?: string;
+  asModal?: boolean;
 }
 
 type AuthChannel = 'mobile' | 'email';
 type EmailAuthMode = 'login' | 'register' | 'forgot';
 type MobileStep = 'input' | 'verify';
 
-export const AuthGate: React.FC<AuthGateProps> = ({ onAuthenticated, onClose }) => {
+export const AuthGate: React.FC<AuthGateProps> = ({
+  onAuthenticated,
+  onClose,
+  title,
+  subtitle,
+  contextMessage,
+  asModal = false,
+}) => {
   // Navigation & Mode States
   const [selectedLanguage, setSelectedLanguage] = useState<AppLanguage>('hi');
   const [authChannel, setAuthChannel] = useState<AuthChannel>('mobile'); // Default to Mobile OTP!
@@ -109,6 +121,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthenticated, onClose }) 
   // Fetch server configuration, resolve redirect result, and check existing session on mount
   useEffect(() => {
     let isMounted = true;
+    analyticsService.trackLoginStarted('auth_screen');
 
     // 1. Check if user just returned from Google OAuth Redirect flow
     checkFirebaseRedirectResult()
@@ -125,6 +138,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthenticated, onClose }) 
             googleId: fbUser.uid,
           });
           setSuccessAuthData(res);
+          analyticsService.trackGoogleLogin();
           setScreenStep('success');
           setTimeout(() => onAuthenticated(res), 1200);
         } catch (err: any) {
@@ -289,6 +303,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthenticated, onClose }) 
       );
 
       setSuccessAuthData(res);
+      analyticsService.trackMobileOtpLogin();
       setScreenStep('success');
       setTimeout(() => onAuthenticated(res), 1500);
     } catch (err: any) {
@@ -395,6 +410,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthenticated, onClose }) 
           googleId: fbResult.uid,
         });
         setSuccessAuthData(res);
+        analyticsService.trackGoogleLogin();
         setScreenStep('success');
         setTimeout(() => onAuthenticated(res), 1200);
         return;
@@ -492,11 +508,13 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthenticated, onClose }) 
       if (emailAuthMode === 'register') {
         const res = await authService.register(fullName, cleanEmail, password, selectedLanguage);
         setSuccessAuthData(res);
+        analyticsService.trackEmailLogin('register');
         setScreenStep('success');
         setTimeout(() => onAuthenticated(res), 1500);
       } else {
         const res = await authService.login(cleanEmail, password);
         setSuccessAuthData(res);
+        analyticsService.trackEmailLogin('login');
         setScreenStep('success');
         setTimeout(() => onAuthenticated(res), 1200);
       }
@@ -869,74 +887,88 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthenticated, onClose }) 
   // ==========================================
   // RENDER: MAIN AUTH SCREEN
   // ==========================================
-  return (
-    <div className="min-h-screen bg-stone-100 flex flex-col justify-center items-center p-3.5 sm:p-6">
-      <div className="w-full max-w-md bg-white rounded-3xl border border-stone-200 shadow-xl overflow-hidden relative">
-        {onClose && (
+  const authCard = (
+    <div className="w-full max-w-md bg-white rounded-3xl border border-stone-200 shadow-xl overflow-hidden relative">
+      {onClose && (
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-white/90 hover:bg-white text-stone-500 hover:text-stone-900 flex items-center justify-center border border-stone-200 shadow-2xs transition-colors cursor-pointer text-xs font-bold"
+          title="Close"
+        >
+          ✕
+        </button>
+      )}
+      {/* Language Bar & Header Branding */}
+      <div className="bg-gradient-to-b from-amber-500/10 via-amber-500/5 to-transparent p-5 sm:p-6 text-center border-b border-stone-100 relative">
+        {/* Language Selector Pills */}
+        <div className="flex items-center justify-center gap-1.5 mb-3.5">
           <button
             type="button"
-            onClick={onClose}
-            className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-white/90 hover:bg-white text-stone-500 hover:text-stone-900 flex items-center justify-center border border-stone-200 shadow-2xs transition-colors cursor-pointer text-xs font-bold"
-            title="Close"
+            onClick={() => handleLanguageChange('hi')}
+            className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all cursor-pointer ${
+              selectedLanguage === 'hi'
+                ? 'bg-amber-600 text-white shadow-xs'
+                : 'bg-white/80 text-stone-600 hover:bg-white border border-stone-200'
+            }`}
           >
-            ✕
+            🇮🇳 हिन्दी
           </button>
-        )}
-        {/* Language Bar & Header Branding */}
-        <div className="bg-gradient-to-b from-amber-500/10 via-amber-500/5 to-transparent p-5 sm:p-6 text-center border-b border-stone-100 relative">
-          {/* Language Selector Pills */}
-          <div className="flex items-center justify-center gap-1.5 mb-3.5">
-            <button
-              type="button"
-              onClick={() => handleLanguageChange('hi')}
-              className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all cursor-pointer ${
-                selectedLanguage === 'hi'
-                  ? 'bg-amber-600 text-white shadow-xs'
-                  : 'bg-white/80 text-stone-600 hover:bg-white border border-stone-200'
-              }`}
-            >
-              🇮🇳 हिन्दी
-            </button>
-            <button
-              type="button"
-              onClick={() => handleLanguageChange('hinglish')}
-              className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all cursor-pointer ${
-                selectedLanguage === 'hinglish'
-                  ? 'bg-amber-600 text-white shadow-xs'
-                  : 'bg-white/80 text-stone-600 hover:bg-white border border-stone-200'
-              }`}
-            >
-              🗣️ Hinglish
-            </button>
-            <button
-              type="button"
-              onClick={() => handleLanguageChange('en')}
-              className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all cursor-pointer ${
-                selectedLanguage === 'en'
-                  ? 'bg-amber-600 text-white shadow-xs'
-                  : 'bg-white/80 text-stone-600 hover:bg-white border border-stone-200'
-              }`}
-            >
-              🌐 English
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => handleLanguageChange('hinglish')}
+            className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all cursor-pointer ${
+              selectedLanguage === 'hinglish'
+                ? 'bg-amber-600 text-white shadow-xs'
+                : 'bg-white/80 text-stone-600 hover:bg-white border border-stone-200'
+            }`}
+          >
+            🗣️ Hinglish
+          </button>
+          <button
+            type="button"
+            onClick={() => handleLanguageChange('en')}
+            className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all cursor-pointer ${
+              selectedLanguage === 'en'
+                ? 'bg-amber-600 text-white shadow-xs'
+                : 'bg-white/80 text-stone-600 hover:bg-white border border-stone-200'
+            }`}
+          >
+            🌐 English
+          </button>
+        </div>
 
-          <div className="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-amber-600 text-white shadow-md shadow-amber-600/20 mb-2.5">
-            <Compass className="w-7 h-7 sm:w-8 sm:h-8" />
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-heading font-extrabold text-stone-900 tracking-tight">
-            Ghar Ghar Vastu <span className="text-amber-600">Go</span>
-          </h1>
-          <p className="text-xs sm:text-sm text-stone-600 mt-0.5 font-medium">
-            {selectedLanguage === 'hi'
+        <div className="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-amber-600 text-white shadow-md shadow-amber-600/20 mb-2.5">
+          <Compass className="w-7 h-7 sm:w-8 sm:h-8" />
+        </div>
+        <h1 className="text-2xl sm:text-3xl font-heading font-extrabold text-stone-900 tracking-tight">
+          {title || (
+            <>
+              Ghar Ghar Vastu <span className="text-amber-600">Go</span>
+            </>
+          )}
+        </h1>
+        <p className="text-xs sm:text-sm text-stone-600 mt-0.5 font-medium">
+          {subtitle ||
+            (selectedLanguage === 'hi'
               ? 'वैदिक वास्तु एवं सकारात्मक ऊर्जा विश्लेषण'
               : selectedLanguage === 'hinglish'
               ? 'Vedic Vastu & Positive Energy Analysis'
-              : 'Vedic Architecture & Spatial Energy Advisor'}
-          </p>
-        </div>
+              : 'Vedic Architecture & Spatial Energy Advisor')}
+        </p>
+      </div>
 
-        {/* Card Body */}
+      {/* Context Message (e.g. Subscription Continue) */}
+      {contextMessage && (
+        <div className="mx-5 sm:mx-7 mt-4 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-900 text-xs sm:text-sm font-semibold flex items-center gap-2.5 animate-in fade-in">
+          <div className="w-7 h-7 rounded-xl bg-amber-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+            <Sparkles className="w-4 h-4" />
+          </div>
+          <div className="flex-1 leading-snug">{contextMessage}</div>
+        </div>
+      )}
+
+      {/* Card Body */}
         <div className="p-5 sm:p-7 space-y-4 sm:space-y-5">
           {/* Error Message */}
           {error && (
@@ -1493,6 +1525,15 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthenticated, onClose }) 
           </div>
         </div>
       </div>
+  );
+
+  if (asModal) {
+    return authCard;
+  }
+
+  return (
+    <div className="min-h-screen bg-stone-100 flex flex-col justify-center items-center p-3.5 sm:p-6">
+      {authCard}
     </div>
   );
 };

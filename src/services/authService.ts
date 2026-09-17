@@ -107,6 +107,19 @@ class AuthService {
     return this.token;
   }
 
+  public isAuthenticated(): boolean {
+    return Boolean(
+      this.currentSession?.authenticated &&
+      this.currentSession.user &&
+      !this.currentSession.isGuest &&
+      !this.currentSession.userId?.startsWith('guest_')
+    );
+  }
+
+  public getSessionSync(): AuthSessionResponse | null {
+    return this.currentSession;
+  }
+
   public setToken(token: string | null) {
     this.token = token;
     try {

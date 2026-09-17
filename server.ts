@@ -18,6 +18,7 @@ import { adminStore } from "./server/adminStore";
 import { requireAdminAuth } from "./server/adminAuth";
 import {
   requireUserSession,
+  requireRegisteredUser,
   getOrCreateSessionForClient,
   signSession,
   createSessionForUser,
@@ -1169,11 +1170,11 @@ async function startServer() {
     res.json(paymentService.getConfig());
   });
 
-  // Create Authenticated Razorpay Order
-  app.post("/api/payments/create-order", async (req, res) => {
+  // Create Authenticated Razorpay Order (Registered Users Only)
+  app.post("/api/payments/create-order", requireRegisteredUser, async (req: AuthenticatedUserRequest, res) => {
     try {
-      const { session } = getOrCreateSessionForClient(req, res);
-      const userId = session.userId;
+      const userId = req.authoritativeUserId!;
+      const session = req.userSession!;
       const account = adminStore.getUserAccount(userId, session.userName, session.userEmail);
       const { planId, couponCode } = req.body;
 
@@ -1220,11 +1221,11 @@ async function startServer() {
     }
   });
 
-  // Create Authenticated Subscription
-  app.post("/api/payments/create-subscription", async (req, res) => {
+  // Create Authenticated Subscription (Registered Users Only)
+  app.post("/api/payments/create-subscription", requireRegisteredUser, async (req: AuthenticatedUserRequest, res) => {
     try {
-      const { session } = getOrCreateSessionForClient(req, res);
-      const userId = session.userId;
+      const userId = req.authoritativeUserId!;
+      const session = req.userSession!;
       const account = adminStore.getUserAccount(userId, session.userName, session.userEmail);
       const { planId } = req.body;
 
@@ -1267,11 +1268,10 @@ async function startServer() {
     }
   });
 
-  // Verify Razorpay Payment with Server-side Cryptographic HMAC
-  app.post("/api/payments/verify", (req, res) => {
+  // Verify Razorpay Payment with Server-side Cryptographic HMAC (Registered Users Only)
+  app.post("/api/payments/verify", requireRegisteredUser, (req: AuthenticatedUserRequest, res) => {
     try {
-      const { session } = getOrCreateSessionForClient(req, res);
-      const userId = session.userId;
+      const userId = req.authoritativeUserId!;
       const { orderId, paymentId, signature } = req.body;
 
       if (!orderId || !paymentId || !signature) {
@@ -1317,11 +1317,10 @@ async function startServer() {
     }
   });
 
-  // Check Razorpay Order Status (for cross-tab sync, polling, and fallback verification)
-  app.get("/api/payments/order-status/:orderId", async (req, res) => {
+  // Check Razorpay Order Status (Registered Users Only)
+  app.get("/api/payments/order-status/:orderId", requireRegisteredUser, async (req: AuthenticatedUserRequest, res) => {
     try {
-      const { session } = getOrCreateSessionForClient(req, res);
-      const userId = session.userId;
+      const userId = req.authoritativeUserId!;
       const orderId = req.params.orderId;
 
       if (!orderId) {
@@ -1359,8 +1358,8 @@ async function startServer() {
   app.post("/api/payments/webhook", webhookHandler);
   app.post("/api/webhooks/razorpay", webhookHandler);
 
-  // Upgrade or subscribe user to PRO or HOME EXPERT (Admin or fallback checkout)
-  app.post("/api/user/subscribe", requireUserSession, (req: AuthenticatedUserRequest, res) => {
+  // Upgrade or subscribe user to PRO or HOME EXPERT (Registered Users Only)
+  app.post("/api/user/subscribe", requireRegisteredUser, (req: AuthenticatedUserRequest, res) => {
     const userId = req.authoritativeUserId!;
     const { planId, durationMonths = 1, paymentMethod = "card", couponCode } = req.body;
     if (planId !== "pro" && planId !== "expert") {
@@ -1375,8 +1374,8 @@ async function startServer() {
     });
   });
 
-  // User personal credit transaction history
-  app.get("/api/user/ledger", requireUserSession, (req: AuthenticatedUserRequest, res) => {
+  // User personal credit transaction history (Registered Users Only)
+  app.get("/api/user/ledger", requireRegisteredUser, (req: AuthenticatedUserRequest, res) => {
     const userId = req.authoritativeUserId!;
     const userLedger = adminStore.creditLedger.filter((t) => t.userId === userId);
     res.json({ ledger: userLedger });

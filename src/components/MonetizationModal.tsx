@@ -20,14 +20,18 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { creditService, CreditStateResponse } from '../services/creditService';
+import { authService } from '../services/authService';
+import { analyticsService } from '../services/analyticsService';
 import { useAppConfig } from '../context/AppConfigContext';
-import { UserCreditAccount, PlanConfig, CreditLedgerRecord } from '../types';
+import { UserCreditAccount, PlanConfig, CreditLedgerRecord, UserProfile } from '../types';
 
 interface MonetizationModalProps {
   isOpen: boolean;
   onClose: () => void;
   defaultTab?: 'plans' | 'packs' | 'ledger';
   highlightAction?: string; // e.g. 'ai_chat' or 'photo_analysis'
+  userProfile?: UserProfile;
+  onRequestAuth?: (onSuccessAction: () => void, planId?: 'pro' | 'expert') => void;
 }
 
 export const MonetizationModal: React.FC<MonetizationModalProps> = ({
@@ -35,6 +39,8 @@ export const MonetizationModal: React.FC<MonetizationModalProps> = ({
   onClose,
   defaultTab = 'plans',
   highlightAction,
+  userProfile,
+  onRequestAuth,
 }) => {
   const { config } = useAppConfig();
   const [activeTab, setActiveTab] = useState<'plans' | 'packs' | 'ledger'>(defaultTab === 'ads' as any ? 'packs' : defaultTab);
@@ -243,6 +249,7 @@ export const MonetizationModal: React.FC<MonetizationModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       loadRazorpayScript().catch(() => {});
+      analyticsService.trackPricingPageView('pricing_modal');
     }
   }, [isOpen]);
 
@@ -659,6 +666,20 @@ export const MonetizationModal: React.FC<MonetizationModalProps> = ({
       return;
     }
 
+    // STRICT AUTHENTICATION CHECK:
+    // Subscriptions MUST be tied to an authenticated registered account
+    const isUserAuth = Boolean(userProfile?.isLoggedIn || authService.isAuthenticated());
+    if (!isUserAuth) {
+      setLastSelectedPlanId(planId);
+      setActionError(null);
+      if (onRequestAuth) {
+        onRequestAuth(() => {
+          handleSubscribe(planId);
+        }, planId);
+        return;
+      }
+    }
+
     cleanupRazorpayInstance();
 
     setIsSubscribing(planId);
@@ -668,6 +689,11 @@ export const MonetizationModal: React.FC<MonetizationModalProps> = ({
     setActionError(null);
     setActionSuccess(null);
 
+    // Track subscription plan selected
+    const selectedPrice = planId === 'expert' ? 299 : 99;
+    const selectedPlanName = planId === 'expert' ? 'Home Expert Suite' : 'Pro Advisor';
+    analyticsService.trackSubscriptionPlanSelected(selectedPlanName, selectedPrice);
+
     try {
       // 1. Request authoritative server order
       const orderResult = await creditService.createPaymentOrder(
@@ -676,6 +702,21 @@ export const MonetizationModal: React.FC<MonetizationModalProps> = ({
       );
 
       if (!orderResult.success || !orderResult.orderId) {
+        if (
+          (orderResult as any).code === 'UNAUTHENTICATED' ||
+          orderResult.error === 'AUTHENTICATION_REQUIRED' ||
+          (orderResult.message && orderResult.message.includes('login'))
+        ) {
+          setIsSubscribing(null);
+          setPaymentStatus('idle');
+          if (onRequestAuth) {
+            onRequestAuth(() => {
+              handleSubscribe(planId);
+            }, planId);
+            return;
+          }
+        }
+
         setPaymentStatus('failed');
         setPaymentStatusText('Payment failed');
         setIsSubscribing(null);
@@ -748,8 +789,10 @@ export const MonetizationModal: React.FC<MonetizationModalProps> = ({
             });
 
             if (verifyRes.success) {
+              analyticsService.trackPaymentSuccess(planDisplayName, Math.round(amountInPaise / 100));
               await handlePaymentSuccess(planDisplayName);
             } else {
+              analyticsService.trackPaymentFailed(planDisplayName, Math.round(amountInPaise / 100), 'verification_failed');
               setPaymentStatus('failed');
               setPaymentStatusText('Payment failed');
               setActionError(verifyRes.message || verifyRes.error || 'Cryptographic payment verification failed on server.');
@@ -778,6 +821,7 @@ export const MonetizationModal: React.FC<MonetizationModalProps> = ({
         modal: {
           ondismiss: () => {
             clearGatewayWatchdog();
+            analyticsService.trackPaymentFailed(planDisplayName, Math.round(amountInPaise / 100), 'user_dismissed');
             setPaymentStatus('cancelled');
             setPaymentStatusText('Payment cancelled');
             setIsSubscribing(null);
@@ -794,6 +838,7 @@ export const MonetizationModal: React.FC<MonetizationModalProps> = ({
         activeRzpRef.current = rzp;
       } catch (sdkInitErr: any) {
         console.error('Razorpay initialization error:', sdkInitErr);
+        analyticsService.trackPaymentFailed(planDisplayName, Math.round(amountInPaise / 100), 'sdk_init_failed');
         setPaymentStatus('failed');
         setPaymentStatusText('Payment failed');
         setIsSubscribing(null);
@@ -806,6 +851,7 @@ export const MonetizationModal: React.FC<MonetizationModalProps> = ({
 
       rzp.on('payment.failed', (resp: any) => {
         clearGatewayWatchdog();
+        analyticsService.trackPaymentFailed(planDisplayName, Math.round(amountInPaise / 100), 'gateway_failed');
         setPaymentStatus('failed');
         setPaymentStatusText('Payment failed');
         setIsSubscribing(null);
@@ -852,6 +898,7 @@ export const MonetizationModal: React.FC<MonetizationModalProps> = ({
 
       // Open Razorpay Checkout modal
       try {
+        analyticsService.trackCheckoutStarted(planDisplayName, Math.round(amountInPaise / 100));
         rzp.open();
       } catch (openErr: any) {
         console.error('Subscription open error:', openErr);

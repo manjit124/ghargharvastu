@@ -173,17 +173,21 @@ export const ContentManagerTab: React.FC = () => {
     if (!editingFaq || !editingFaq.question || !editingFaq.answer) return;
     try {
       if (editingFaq.id) {
-        const res = await adminFetch<{ success: boolean; faq: FAQItem }>(
+        const res = await adminFetch<{ success: boolean; faq?: FAQItem }>(
           `/api/admin/content/faqs/${editingFaq.id}`,
           { method: 'PUT', body: JSON.stringify(editingFaq) }
         );
-        setFaqs((prev) => prev.map((f) => (f.id === res.faq.id ? res.faq : f)));
+        if (res?.faq) {
+          setFaqs((prev) => prev.map((f) => (f.id === res.faq!.id ? res.faq! : f)));
+        }
       } else {
-        const res = await adminFetch<{ success: boolean; faq: FAQItem }>(
+        const res = await adminFetch<{ success: boolean; faq?: FAQItem }>(
           '/api/admin/content/faqs',
           { method: 'POST', body: JSON.stringify(editingFaq) }
         );
-        setFaqs((prev) => [...prev, res.faq]);
+        if (res?.faq) {
+          setFaqs((prev) => [...prev, res.faq!]);
+        }
       }
       setIsFaqModalOpen(false);
       setSuccessMessage('FAQ item saved');
