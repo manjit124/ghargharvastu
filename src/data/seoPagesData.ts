@@ -9,6 +9,11 @@ export interface SeoInternalLink {
   description: string;
 }
 
+export interface SeoPracticalTip {
+  title: string;
+  advice: string;
+}
+
 export interface SeoTopicPageData {
   slug: string;
   path: string;
@@ -20,6 +25,7 @@ export interface SeoTopicPageData {
   badge: string;
   intro: string;
   keyRule: string;
+  disclaimerText: string;
   idealDirections: {
     direction: string;
     hindiName: string;
@@ -36,11 +42,15 @@ export interface SeoTopicPageData {
     impact: string;
     remedy: string;
   }[];
+  practicalConsiderations: SeoPracticalTip[];
   faq: SeoTopicFaq[];
   internalLinks: SeoInternalLink[];
   ctaText: string;
   ctaQuery: string;
 }
+
+const TOPIC_DISCLAIMER =
+  'Advisory Notice: Vastu suggestions on this page represent traditional Indian cultural beliefs and historical architectural conventions. They are not empirical scientific laws, medical cures, or financial guarantees. Always prioritize structural safety, building bylaws, and personal comfort.';
 
 export const SEO_TOPIC_PAGES: Record<string, SeoTopicPageData> = {
   'vastu-shastra': {
@@ -52,38 +62,39 @@ export const SEO_TOPIC_PAGES: Record<string, SeoTopicPageData> = {
     subtitle: 'Vedic spatial science aligned with daylight, ventilation, and thermal harmony',
     hindiTitle: 'वास्तु शास्त्र: आधुनिक घरों के लिए संपूर्ण मार्गदर्शिका',
     badge: 'Core Fundamentals',
-    intro: 'Vastu Shastra (वास्तु शास्त्र) is the timeless Indian science of architecture and spatial design. Originating from classical texts like the Mayamata, Manasara, and Brihat Samhita, Vastu balances the five primordial elements—Earth (Prithvi), Water (Jal), Fire (Agni), Air (Vayu), and Space (Akash)—with the Earth\'s geomagnetic forces and the sun\'s circadian path across the sky. In modern apartments and independent houses, practical Vastu creates peaceful, healthy, and energetically balanced living spaces without superstitious fear or unnecessary structural demolition.',
+    disclaimerText: TOPIC_DISCLAIMER,
+    intro: 'Vastu Shastra (वास्तु शास्त्र) is the timeless Indian science of architecture and spatial design. Originating from classical texts like the Mayamata, Manasara, and Brihat Samhita, Vastu balances the five primordial elements—Earth (Prithvi), Water (Jal), Fire (Agni), Air (Vayu), and Space (Akash)—with natural solar progression and wind patterns. In modern apartments and independent houses, practical Vastu creates peaceful, healthy, and organized living spaces without superstitious fear or unnecessary structural demolition.',
     keyRule: 'Balance the 5 natural elements across cardinal zones: Water in North-East, Fire in South-East, Earth in South-West, Air in North-West, and Space at the center (Brahmasthan).',
     idealDirections: [
       {
         direction: 'North-East (Ishan)',
         hindiName: 'ईशान कोण',
         verdict: 'Best',
-        explanation: 'Water and divine clarity. Receives gentle morning ultraviolet light. Keep light, clean, and uncluttered for meditation or pooja.',
+        explanation: 'Associated with Water and mental clarity in traditional Vastu. Receives gentle morning ultraviolet light. Keep light, clean, and uncluttered.',
       },
       {
         direction: 'South-East (Agni)',
         hindiName: 'आग्नेय कोण',
         verdict: 'Best',
-        explanation: 'Fire energy and metabolism. Best suited for the kitchen and cooking stove to harness the midday solar heat.',
+        explanation: 'Fire energy and thermal warmth. Best suited for the kitchen and cooking stove to harness midday warmth.',
       },
       {
         direction: 'South-West (Nairutya)',
         hindiName: 'नैऋत्य कोण',
         verdict: 'Best',
-        explanation: 'Earth element and stability. Best for the master bedroom and heavy structural load-bearing walls.',
+        explanation: 'Earth element and physical stability. Best for master bedrooms and solid load-bearing furniture.',
       },
       {
         direction: 'North-West (Vayavya)',
         hindiName: 'वायव्य कोण',
         verdict: 'Acceptable',
-        explanation: 'Air and movement. Ideal for guest rooms, finished goods, and balanced ventilation.',
+        explanation: 'Air and movement. Ideal for guest rooms, pantry storage, and cross-ventilation.',
       },
     ],
     goldenPrinciples: [
       {
         title: 'Brahmasthan Openness',
-        description: 'The geometric center of the home (Brahmasthan) represents pure space (Akash). Keeping this zone uncluttered allows free airflow, natural daylight diffusion, and positive energy circulation throughout all adjoining rooms.',
+        description: 'The geometric center of the home (Brahmasthan) represents pure space (Akash). Keeping this zone uncluttered allows free airflow, natural daylight diffusion, and comfortable movement throughout all adjoining rooms.',
         remedyTip: 'Avoid heavy pillars, toilets, or dark storage closets directly in the center of the house.',
       },
       {
@@ -100,28 +111,42 @@ export const SEO_TOPIC_PAGES: Record<string, SeoTopicPageData> = {
     commonMistakes: [
       {
         mistake: 'Placing toilets in North-East (Ishan Kon)',
-        impact: 'Contaminates the highest vibrational water zone, disrupting mental peace and clarity.',
-        remedy: 'Keep toilet lid closed, use rock salt bowls to absorb negative humidity, and place an energizing yellow/white light outside.',
+        impact: 'According to traditional beliefs, this disrupts the quiet water zone. Practically, it may introduce moisture to morning-light zones.',
+        remedy: 'Keep toilet lid closed, ensure active exhaust ventilation, and place a small bowl of unrefined sea salt to absorb dampness.',
       },
       {
         mistake: 'Heavy storage in North or East zones',
-        impact: 'Blocks morning solar energy and gentle atmospheric airflow.',
+        impact: 'Blocks morning solar energy and gentle atmospheric airflow into interior spaces.',
         remedy: 'Move heavy wardrobes, steel almirahs, and storage boxes to South or West walls.',
       },
       {
         mistake: 'Believing that demolition is mandatory for Vastu balance',
         impact: 'Unnecessary anxiety, high expense, and structural damage to the home.',
-        remedy: 'Consult Ghar Ghar Vastu AI for gentle non-structural remedies such as lighting, color correction, and directional realignment.',
+        remedy: 'Consult Ghar Ghar Vastu for gentle non-structural remedies such as lighting, color correction, and directional realignment.',
+      },
+    ],
+    practicalConsiderations: [
+      {
+        title: 'Passive Solar Daylighting',
+        advice: 'Position study desks and family seating near East and North windows to benefit from natural daylighting, which reduces eye strain and artificial lighting costs.',
+      },
+      {
+        title: 'Natural Cross-Drafts',
+        advice: 'Ensure windows on opposing walls can be opened simultaneously for 15–20 minutes each morning to flush stale indoor CO2.',
+      },
+      {
+        title: 'Structural Safety First',
+        advice: 'Never alter load-bearing columns, shear walls, or floor slabs based on layout suggestions without certified structural engineering drawings.',
       },
     ],
     faq: [
       {
         question: 'What is the main purpose of Vastu Shastra?',
-        answer: 'The primary purpose of Vastu Shastra is to align human dwellings with natural forces (sunlight, magnetic fields, wind directions, and the five elements) to foster physical health, mental calm, prosperity, and family harmony.',
+        answer: 'The primary purpose of Vastu Shastra is to align human dwellings with natural forces (sunlight, wind directions, and spatial proportions) to foster physical comfort, mental calm, and family harmony.',
       },
       {
         question: 'Can Vastu defects (dosh) be corrected without breaking walls?',
-        answer: 'Yes, over 90% of Vastu imbalances can be addressed non-destructively through proper furniture reorientation, mirror positioning, indoor plants, lighting adjustments, and color balancing.',
+        answer: 'Yes, the vast majority of spatial imbalances can be addressed non-destructively through proper furniture reorientation, mirror positioning, indoor plants, lighting adjustments, and color balancing.',
       },
       {
         question: 'How does Ghar Ghar Vastu AI help with Vastu consultation?',
@@ -147,6 +172,7 @@ export const SEO_TOPIC_PAGES: Record<string, SeoTopicPageData> = {
     subtitle: 'Comprehensive spatial guide for independent houses, flats, and modern apartments',
     hindiTitle: 'घर का वास्तु: कमरे, दिशाएं और सरल उपाय',
     badge: 'Homeowner Blueprint',
+    disclaimerText: TOPIC_DISCLAIMER,
     intro: 'Designing or living in a home aligned with Vastu Shastra (घर का वास्तु) ensures that every space fulfills its natural function without conflict. Whether you reside in a 2BHK flat, a modern studio apartment, or an independent villa, understanding the ideal zones for the master bedroom, kitchen, living hall, mandir, and entrance brings peace of mind and effortless daily living.',
     keyRule: 'Place high-activity spaces (entrance, living) in North/East, fire/energy (kitchen) in South-East, rest (bedrooms) in South-West, and spiritual clarity (mandir) in North-East.',
     idealDirections: [
@@ -154,13 +180,13 @@ export const SEO_TOPIC_PAGES: Record<string, SeoTopicPageData> = {
         direction: 'Main Entrance',
         hindiName: 'मुख्य द्वार',
         verdict: 'Best',
-        explanation: 'North, East, or North-East. Welcomes positive prana (vital energy) and natural illumination.',
+        explanation: 'North, East, or North-East. Welcomes positive natural illumination and comfortable airflow.',
       },
       {
         direction: 'Master Bedroom',
         hindiName: 'मास्टर बेडरूम',
         verdict: 'Best',
-        explanation: 'South-West (Nairutya). Provides grounded stability, emotional security, and restorative sleep.',
+        explanation: 'South-West (Nairutya). Traditionally associated with stability, privacy, and restorative rest.',
       },
       {
         direction: 'Kitchen Hearth',
@@ -172,41 +198,55 @@ export const SEO_TOPIC_PAGES: Record<string, SeoTopicPageData> = {
         direction: 'Pooja Ghar / Mandir',
         hindiName: 'पूजा घर',
         verdict: 'Best',
-        explanation: 'North-East (Ishan Kon). The purest quadrant for contemplation and spiritual focus.',
+        explanation: 'North-East (Ishan Kon). The quietest quadrant for contemplation and spiritual focus.',
       },
     ],
     goldenPrinciples: [
       {
         title: 'Master Bedroom Grounding',
-        description: 'The master of the household should occupy the South-West quadrant. Heavy furniture like teak beds, solid wood wardrobes, and safes should sit along the South and West walls of this room.',
-        remedyTip: 'Sleep with head directed South or East for optimal cardiovascular and geomagnetic alignment.',
+        description: 'The primary bedroom is traditionally placed in the South-West quadrant. Heavy furniture like solid wood wardrobes and storage units should sit along the South and West walls of this room.',
+        remedyTip: 'Sleep with head directed South or East for optimal circadian alignment.',
       },
       {
         title: 'Separation of Fire and Water',
-        description: 'In the kitchen, the gas stove (Fire element) and the washing sink (Water element) must never touch or sit directly opposite one another in a tight galley layout.',
+        description: 'In the kitchen, the gas stove (Fire element) and the washing sink (Water element) should have adequate clearance between them.',
         remedyTip: 'Maintain a minimum 2 to 3 feet gap. If adjacent, place a wooden cutting board or small green indoor plant between them.',
       },
       {
         title: 'De-cluttering the Brahmasthan',
-        description: 'Keep the center of your house free of massive spiral staircases, heavy pillars, or sunken toilets to allow prana energy to circulate freely.',
-        remedyTip: 'Decorate the central living area with warm low-profile furniture and neutral ivory tones.',
+        description: 'Keep the center of your house free of massive spiral staircases, heavy pillars, or sunken toilets to allow open spatial flow.',
+        remedyTip: 'Decorate the central living area with low-profile furniture and warm ivory tones.',
       },
     ],
     commonMistakes: [
       {
         mistake: 'Kitchen located in North-East (Water zone)',
-        impact: 'Water and Fire clash, causing metabolic stress, domestic arguments, and financial drain.',
-        remedy: 'If shifting the kitchen is impossible, place a bronze Sun symbol or copper swastik on the South-East wall, and use a green stone under the gas stove.',
+        impact: 'In traditional Vastu, water and fire clash, which may create spatial friction and an awkward workflow in the home.',
+        remedy: 'Place a bronze Sun symbol or brass decor on the wall, keep counters uncluttered, and use a green stone slab under the gas stove.',
       },
       {
         mistake: 'Master bedroom placed in North-East',
-        impact: 'North-East is too light and spiritually charged for marital rest, causing restlessness or shallow sleep.',
-        remedy: 'Use warm earthy curtains (terracotta or beige), heavy bedside furniture, and position the bed towards South-West within the room.',
+        impact: 'North-East receives early morning sun, which may lead to lighter, early morning awakenings.',
+        remedy: 'Use blackout curtains, warm earthy linens, and place the bed towards the South-West wall of the room.',
       },
       {
         mistake: 'Main door opening outwards or blocked by shoe racks',
-        impact: 'Restricts energy flow and makes the entrance feel cluttered and uninviting.',
-        remedy: 'Keep shoe racks concealed inside cabinets, ensure the door opens smoothly inward 90 degrees, and add warm 2700K lighting.',
+        impact: 'Restricts door swing and makes the entrance feel crowded upon arrival.',
+        remedy: 'Keep shoe racks concealed inside closed cabinets and ensure the door opens smoothly inward.',
+      },
+    ],
+    practicalConsiderations: [
+      {
+        title: 'Zoned Acoustic Privacy',
+        advice: 'Position television zones and home theater equipment away from master bedrooms and children\'s study nooks to prevent evening sound bleed.',
+      },
+      {
+        title: 'Kitchen Exhaust System',
+        advice: 'Always install a powerful chimney or exhaust fan over the stove, regardless of cardinal direction, to maintain indoor air quality.',
+      },
+      {
+        title: 'Electrical Panel Location',
+        advice: 'Place the main circuit breaker (MCB) in an easily accessible, dry utility corridor away from moisture-heavy plumbing lines.',
       },
     ],
     faq: [
@@ -215,8 +255,8 @@ export const SEO_TOPIC_PAGES: Record<string, SeoTopicPageData> = {
         answer: 'Stand in the center of your home with a compass or use the Ghar Ghar Vastu compass tool. Divide the layout into 8 cardinal quadrants to map the entrance, kitchen, bedrooms, pooja room, and bathrooms against ideal zones.',
       },
       {
-        question: 'Is South-facing house always bad according to Vastu?',
-        answer: 'No, this is a common myth. A South-facing home with an entrance located in the auspicious 3rd or 4th pada (Vitatha or Gruhakshat) can bring extraordinary prosperity, fame, and success.',
+        question: 'Is a South-facing house always bad according to Vastu?',
+        answer: 'No, this is a common myth. A South-facing home with an entrance located in the auspicious 3rd or 4th pada (Vitatha or Gruhakshat) can bring high energy, stability, and success.',
       },
       {
         question: 'Can Vastu principles be applied to rental flats?',
@@ -242,80 +282,95 @@ export const SEO_TOPIC_PAGES: Record<string, SeoTopicPageData> = {
     subtitle: 'The primary gateway (Simha Dwara) of prosperity, health, and vital energy',
     hindiTitle: 'मुख्य द्वार का वास्तु: सही दिशा, नियम और अचूक उपाय',
     badge: 'Entrance Gateway',
-    intro: 'In Vastu Shastra, the main entrance door—historically revered as the Simha Dwara (Lion Gate)—is considered the mouth of the home. It is the decisive boundary where external cosmic energy (prana) enters the dwelling. An unobstructed, well-lit, and correctly oriented main door attracts auspicious opportunities, financial well-being, and vitality for all family members.',
+    disclaimerText: TOPIC_DISCLAIMER,
+    intro: 'In Vastu Shastra, the main entrance door—historically revered as the Simha Dwara (Lion Gate)—is considered the mouth of the home. It is the decisive boundary where external energy enters the dwelling. An unobstructed, well-lit, and correctly oriented main door creates a welcoming atmosphere, visual clarity, and positive impressions for all family members.',
     keyRule: 'The main door should be larger than all other interior doors, open inward in a clockwise direction, and remain clean, well-lit, and free of shoes or clutter.',
     idealDirections: [
       {
         direction: 'North (Uttar)',
         hindiName: 'उत्तर दिशा (कुबेर द्वार)',
         verdict: 'Best',
-        explanation: 'Ruled by Lord Kuber. Brings commercial success, investment growth, and abundant career opportunities.',
+        explanation: 'Ruled by Lord Kuber in tradition. Associated with career opportunities, commercial stability, and fresh ambient light.',
       },
       {
         direction: 'East (Purva)',
         hindiName: 'पूर्व दिशा (सूर्य द्वार)',
         verdict: 'Best',
-        explanation: 'Ruled by Indra and the rising Sun. Brings social reputation, vitality, clarity of thought, and spiritual wisdom.',
+        explanation: 'Welcomes the rising sun and daylight into the foyer, promoting morning alertness and positive social connection.',
       },
       {
         direction: 'North-East (Ishan)',
         hindiName: 'ईशान कोण',
         verdict: 'Best',
-        explanation: 'Divine quadrant. Highly auspicious for peace, intellectual achievement, and family harmony.',
+        explanation: 'Sacred quadrant. Highly auspicious in tradition for peace, intellectual focus, and family harmony.',
       },
       {
         direction: 'South-West (Nairutya)',
         hindiName: 'नैऋत्य कोण',
         verdict: 'Avoid',
-        explanation: 'Earth stability zone. An entrance here can cause instability, disputes, and sudden financial outflow unless remedied.',
+        explanation: 'Earth stability zone. In classical Vastu, an entrance here requires grounding elements, warm illumination, and tidy organization.',
       },
     ],
     goldenPrinciples: [
       {
         title: 'Clockwise Inward Opening',
-        description: 'The main door must open inward smoothly without making squeaking or groaning sounds. A clockwise swing welcomes guests and energy harmoniously.',
+        description: 'The main door must open inward smoothly without making squeaking or groaning sounds. A clockwise swing welcomes guests into the home without friction.',
         remedyTip: 'Oil hinges regularly so the door swings silently and freely to at least 90 degrees.',
       },
       {
         title: 'The Sacred Threshold (Dehleez)',
-        description: 'Classical Indian architecture mandates a raised wooden or marble threshold (dehleez). It prevents positive household energy from leaking out and repels dust and erratic vibrations.',
+        description: 'Classical Indian architecture mandates a raised wooden or marble threshold (dehleez). It prevents exterior dust and rainwater from blowing into the foyer.',
         remedyTip: 'Install a subtle 1-inch raised teak or stone threshold across the bottom of the doorway.',
       },
       {
         title: 'Bright Illumination & Nameplate',
-        description: 'A well-illuminated entrance with a clean, readable nameplate attracts positive recognition and opportunity. Brass or copper nameplates reflect auspicious light.',
+        description: 'A well-illuminated entrance with a clean, readable nameplate creates an inviting entry experience for visitors and emergency services.',
         remedyTip: 'Use warm white (2700K–3000K) lighting above the doorway; avoid dark shadowy alcoves.',
       },
     ],
     commonMistakes: [
       {
         mistake: 'Shoe racks, garbage bins, or broken mops directly in front of door',
-        impact: 'Creates stinking stagnant energy (Sha Chi) right at the home entrance.',
+        impact: 'Creates visual clutter and unpleasant odors right at the home entrance.',
         remedy: 'Relocate shoe storage to a closed cabinet on the side; keep the immediate threshold spotless.',
       },
       {
         mistake: 'Main door facing an elevator, electric pole, or dead end',
-        impact: 'Causes erratic rushing energy or piercing energy (Veedhi Shoola).',
-        remedy: 'Hang a subtle convex mirror or brass Swastik/Trishul above the frame on the exterior side.',
+        impact: 'May create sudden rushing foot traffic or visual harshness outside the front door.',
+        remedy: 'Hang a subtle convex mirror or brass Swastik/Om above the frame on the exterior side and place a green plant.',
       },
       {
         mistake: 'Main door opening directly in line with back door or balcony',
-        impact: 'Energy rushes straight through the house and escapes without nourishing the rooms.',
-        remedy: 'Place a decorative folding screen, lush green plant, or sheer curtain to gently deflect the flow.',
+        impact: 'Wind drafts blow straight through the house without circulating into living areas.',
+        remedy: 'Place a decorative folding screen, lush green plant, or sheer curtain to gently buffer the flow.',
+      },
+    ],
+    practicalConsiderations: [
+      {
+        title: 'Deadbolt & Security Clearance',
+        advice: 'Install a heavy-duty deadbolt and wide-angle peephole or digital video doorbell at 55–60 inches height for household security.',
+      },
+      {
+        title: 'Weatherstripping & Acoustic Seals',
+        advice: 'Attach perimeter rubber weatherstrips to the door jamb to prevent hallway noise and air conditioning draft loss.',
+      },
+      {
+        title: 'Foyer Shoe Storage Hygiene',
+        advice: 'Use louvered or ventilated shoe cabinets to prevent odor buildup and shoe clutter near the entry threshold.',
       },
     ],
     faq: [
       {
         question: 'Which is the best direction for the main door according to Vastu?',
-        answer: 'North, East, and North-East are considered the most auspicious directions for a main entrance. North brings financial growth, East brings fame and health, and North-East brings peace and spiritual clarity.',
+        answer: 'North, East, and North-East are traditionally considered the most auspicious directions for a main entrance, welcoming gentle daylight and comfortable ambient temperatures.',
       },
       {
         question: 'Can South or West entrances be auspicious?',
-        answer: 'Yes! Vastu divides each direction into 8 sub-zones (padas). In the South, the 3rd and 4th padas (Vitatha and Gruhakshat) are highly auspicious for financial wealth and authority. In the West, the 3rd and 4th padas (Sugriva and Pushpadanta) bring steady prosperity.',
+        answer: 'Yes! Vastu divides each direction into 8 sub-zones (padas). In the South, the 3rd and 4th padas (Vitatha and Gruhakshat) are considered favorable. In the West, Pushpadanta pada brings steady stability.',
       },
       {
         question: 'What symbols should be placed at the main door?',
-        answer: 'Auspicious symbols such as the Swastika, Om, Trishul, and Shubh-Labh made of brass or copper can be placed near the top or side of the main entrance to invoke positive vibrations.',
+        answer: 'Traditional auspicious motifs like the Swastika, Om, or Shubh-Labh made of brass or wood can be placed near the doorway to celebrate cultural heritage and welcome visitors.',
       },
     ],
     internalLinks: [
@@ -336,80 +391,95 @@ export const SEO_TOPIC_PAGES: Record<string, SeoTopicPageData> = {
     subtitle: 'Restorative sanctuary for deep sleep, marital harmony, and rejuvenation',
     hindiTitle: 'बेडरूम का वास्तु: सोने की सही दिशा और वास्तु नियम',
     badge: 'Rest & Serenity',
-    intro: 'We spend one-third of our lives sleeping. In Vastu Shastra, the master bedroom is not merely a place for rest, but a sacred regenerative sanctuary where physical energy is restored and marital bonds are strengthened. Proper bedroom Vastu coordinates geomagnetic polarity with the body\'s circulatory system to ensure sound sleep, emotional stability, and vitality.',
+    disclaimerText: TOPIC_DISCLAIMER,
+    intro: 'We spend one-third of our lives sleeping. In Vastu Shastra, the master bedroom is treated as a restorative sanctuary where physical energy is recovered and peace of mind is nurtured. Proper bedroom layout coordinates quiet directional alignment with circadian sleep patterns to support sound rest, emotional stability, and vitality.',
     keyRule: 'Always sleep with your head positioned towards the South or East. Place the bed along a solid wall and avoid mirrors reflecting the sleeping body.',
     idealDirections: [
       {
         direction: 'Head Towards South (Dakshin)',
         hindiName: 'दक्षिण सिरहाना',
         verdict: 'Best',
-        explanation: 'Scientific alignment. Human body has positive magnetic polarity at head; South pole of Earth attracts it harmoniously, stabilizing blood pressure and deep REM sleep.',
+        explanation: 'Traditional Vastu considers South head orientation supportive of restorative, calm sleep aligned with geomagnetic currents.',
       },
       {
         direction: 'Head Towards East (Purva)',
         hindiName: 'पूर्व सिरहाना',
         verdict: 'Best',
-        explanation: 'Solar alignment. Enhances cognitive memory, academic concentration, and spiritual focus. Excellent for students and professionals.',
+        explanation: 'Solar alignment. Welcomes morning natural light and supports focus, memory, and calm waking routines.',
       },
       {
         direction: 'Head Towards West (Pashchim)',
         hindiName: 'पश्चिम सिरहाना',
         verdict: 'Acceptable',
-        explanation: 'Neutral alignment. Suitable for guest rooms or active working adults.',
+        explanation: 'Neutral alignment in Vastu tradition. Suitable for guest rooms or secondary bedrooms.',
       },
       {
         direction: 'Head Towards North (Uttar)',
         hindiName: 'उत्तर सिरहाना',
         verdict: 'Avoid',
-        explanation: 'Magnetic clash! North pole of Earth repels North pole of human head, causing restless sleep, headaches, and elevated blood pressure over time.',
+        explanation: 'In traditional Vastu, sleeping with head pointing North is discouraged as it is believed to cause restless, disrupted sleep.',
       },
     ],
     goldenPrinciples: [
       {
         title: 'Solid Wall Headboard',
-        description: 'Position your bed against a solid wall rather than beneath a large window or centered in mid-room without backing. A solid wall provides psychological and spatial grounding.',
-        remedyTip: 'Use a solid wooden or upholstered headboard without sharp decorative metal spikes.',
+        description: 'Position your bed against a solid wall rather than beneath a drafty window or centered in mid-room without backing. A solid wall provides psychological and spatial grounding.',
+        remedyTip: 'Use a solid wooden or upholstered headboard without sharp decorative metal edges.',
       },
       {
         title: 'Wardrobe & Heavy Almirah Placement',
-        description: 'Heavy wardrobes, dressing units, and master safes should be stationed on the South or West walls of the bedroom to keep the South-West weighted down.',
-        remedyTip: 'Leave the North and East portions of the bedroom spacious and light for free circulation.',
+        description: 'Heavy wardrobes, dressing units, and master safes should be stationed on the South or West walls of the bedroom to anchor those directions.',
+        remedyTip: 'Leave the North and East portions of the bedroom spacious and light for free air circulation.',
       },
       {
         title: 'Calming Neutral Palette',
-        description: 'Opt for soothing pastel tones—warm ivory, almond beige, soft sage green, or gentle rose. Avoid intense fiery reds, neon oranges, or stark black on bedroom walls.',
+        description: 'Opt for soothing pastel tones—warm ivory, almond beige, soft sage green, or gentle rose. Avoid intense fiery reds or neon colors on bedroom walls.',
         remedyTip: 'Introduce soft ambient lighting (2700K) with warm fabric lampshades.',
       },
     ],
     commonMistakes: [
       {
         mistake: 'Mirror directly reflecting the bed',
-        impact: 'Causes subconscious restlessness, insomnia, and strain in spousal communication.',
+        impact: 'Can cause subconscious restlessness or startling shadows in the dark, disrupting sleep continuity.',
         remedy: 'Relocate the mirror to North or East walls, or cover the mirror with a decorative cloth before sleeping.',
       },
       {
         mistake: 'Sleeping under an exposed structural ceiling beam',
-        impact: 'Exerts continuous downward compressive pressure (Sha Chi), leading to stress and shoulder tension.',
-        remedy: 'Move bed away from the beam, or conceal the beam with a false ceiling or decorative fabric canopy.',
+        impact: 'Creates an optical sensation of downward pressure, leading to subconscious tension.',
+        remedy: 'Move bed away from the beam line, or conceal the beam with a false ceiling panel or canopy.',
       },
       {
         mistake: 'Electronic gadgets, routers, or work desks right next to pillow',
-        impact: 'Electromagnetic radiation and work-related stress disrupt melatonin production and deep sleep.',
-        remedy: 'Keep phones at least 4 feet away; switch off Wi-Fi routers at night.',
+        impact: 'Screen glare and notification chimes interfere with melatonin production and deep rest.',
+        remedy: 'Keep mobile phones at least 4 feet away; use an analog alarm clock.',
+      },
+    ],
+    practicalConsiderations: [
+      {
+        title: 'Mattress Ergonomics & Firmness',
+        advice: 'Pair directional alignment with a high-density orthotic mattress that supports spinal curvature and promotes restorative REM sleep.',
+      },
+      {
+        title: 'Blackout Curtains & Thermal Lining',
+        advice: 'Install double-track curtains with blackout backing to eliminate streetlight glare and keep bedroom temperatures consistent.',
+      },
+      {
+        title: 'Walking Clearance Around Bed',
+        advice: 'Maintain at least 24 inches of clear floor space on both sides of the bed for safe nighttime movement and easy bed-making.',
       },
     ],
     faq: [
       {
         question: 'Which is the best sleeping direction according to Vastu?',
-        answer: 'South is the universally best direction to point your head while sleeping, followed closely by East. Never sleep with your head pointing North.',
+        answer: 'South is traditionally considered the most restful direction to point your head while sleeping, followed closely by East. North is traditionally discouraged.',
       },
       {
         question: 'Where should the bed be placed in the bedroom?',
-        answer: 'Place the bed against the South or West wall of the room, leaving ample walking space on both sides. Avoid placing the bed in line with the bedroom entrance door.',
+        answer: 'Place the bed against the South or West wall of the room, leaving ample walking space on both sides. Avoid placing the bed directly in line with the doorway.',
       },
       {
         question: 'What should I do if a mirror faces my bed?',
-        answer: 'If the mirror cannot be moved, simply cover it with a light curtain, bedsheet, or decorative screen at night to prevent sleep disturbance.',
+        answer: 'If the mirror cannot be moved, simply cover it with a light fabric throw, curtain, or screen at night to prevent sleep disturbance.',
       },
     ],
     internalLinks: [
@@ -427,47 +497,48 @@ export const SEO_TOPIC_PAGES: Record<string, SeoTopicPageData> = {
     title: 'Kitchen Vastu – Stove & Sink Direction, Agni Zone Guidelines',
     metaDescription: 'Complete Kitchen Vastu guide: optimal South-East Agni Kon placement, stove and sink distance rules, cook facing direction, refrigerator zone, and remedies.',
     h1: 'Kitchen Vastu: Stove Direction, Sink Harmony & Agni Zone',
-    subtitle: 'Nourishing the hearth, family metabolism, and financial abundance',
+    subtitle: 'Nourishing the hearth, culinary ergonomics, and domestic safety',
     hindiTitle: 'रसोई का वास्तु: सही दिशा, गैस चूल्हा और सिंक के नियम',
     badge: 'Fire & Nutrition',
-    intro: 'The kitchen is the culinary heart of every Indian home. In Vastu Shastra, the kitchen embodies the sacred Fire element (Agni Devata), governing the physical metabolism, vitality, and wealth accumulation of the family. A harmoniously designed kitchen promotes delicious nourishment, vibrant digestive health, and peace among household members.',
-    keyRule: 'Locate the kitchen in the South-East (Agni Kon) or North-West (Vayavya). Cook while facing East, and maintain strict physical separation between the stove and water sink.',
+    disclaimerText: TOPIC_DISCLAIMER,
+    intro: 'The kitchen is the culinary heart of every home. In Vastu Shastra, the kitchen embodies the sacred Fire element (Agni), governing cooking vitality, nourishment, and family warmth. A harmoniously designed kitchen promotes safe workflows, culinary enjoyment, and effortless meal preparation.',
+    keyRule: 'Locate the kitchen in the South-East (Agni Kon) or North-West (Vayavya). Cook while facing East, and maintain safe physical separation between the stove and water sink.',
     idealDirections: [
       {
         direction: 'South-East (Agni Kon)',
         hindiName: 'आग्नेय कोण',
         verdict: 'Best',
-        explanation: 'Natural home of the Fire element. Midday thermal absorption enhances cooking hygiene and digestive vitality.',
+        explanation: 'Natural home of the Fire element in classical Vastu. Morning solar warmth keeps countertops dry and hygienic.',
       },
       {
         direction: 'North-West (Vayavya Kon)',
         hindiName: 'वायव्य कोण',
         verdict: 'Acceptable',
-        explanation: 'Air element alternative. Supports active culinary circulation when South-East is occupied.',
+        explanation: 'Air element alternative. Supports active kitchen ventilation when South-East is occupied.',
       },
       {
         direction: 'East (Purva)',
         hindiName: 'पूर्व दिशा',
         verdict: 'Acceptable',
-        explanation: 'Morning solar rays keep countertops sanitized and dry.',
+        explanation: 'Morning solar rays help keep preparation counters dry and pleasant.',
       },
       {
         direction: 'North-East (Ishan Kon)',
         hindiName: 'ईशान कोण',
         verdict: 'Avoid',
-        explanation: 'Severe conflict! North-East is Water. Fire in Water zone drains finances and sparks domestic friction.',
+        explanation: 'In traditional Vastu, North-East represents the Water element, making it an awkward location for heat and cooking equipment.',
       },
     ],
     goldenPrinciples: [
       {
         title: 'Cook Facing East',
-        description: 'The cooking platform should be positioned so that the chef faces East while preparing meals. Facing East welcomes invigorating morning sunlight and creates calm, attentive food preparation.',
+        description: 'The cooking platform should be positioned so that you face East while preparing meals. Facing East welcomes invigorating morning sunlight and promotes focused food preparation.',
         remedyTip: 'Position the gas hob on the South-East counter facing East.',
       },
       {
         title: 'Separation of Fire and Water (Stove & Sink)',
-        description: 'Fire (the gas burner) and Water (the sink/dishwasher) are opposing elements. Placing them side-by-side creates subconscious tension and financial volatility.',
-        remedyTip: 'Maintain at least 2 to 3 feet between stove and sink. Use a small wooden cutting board, ceramic partition, or green plant as an elemental buffer.',
+        description: 'In traditional Vastu, Fire and Water are opposing elements. Practically, having a wet sink right next to hot oil presents grease-splatter and steam burn risks.',
+        remedyTip: 'Maintain at least 2 to 3 feet between stove and sink. Use a wooden cutting board or heat-resistant glass partition as an elemental buffer.',
       },
       {
         title: 'Electrical Appliance Zone',
@@ -478,18 +549,32 @@ export const SEO_TOPIC_PAGES: Record<string, SeoTopicPageData> = {
     commonMistakes: [
       {
         mistake: 'Gas stove placed directly next to the kitchen sink',
-        impact: 'Continuous clash of Fire and Water elements, leading to health issues and recurring expenses.',
-        remedy: 'Place a wooden barrier or live green plant between them. If on an L-shaped counter, put stove on one arm and sink on the other.',
+        impact: 'In traditional Vastu, fire and water elements clash; practically, water splashes near hot oil cause burn and slip hazards.',
+        remedy: 'Place a wooden partition, cutting board, or mini plant between them. If on an L-counter, place stove on one leg and sink on the other.',
       },
       {
         mistake: 'Kitchen directly facing or sharing a wall with the toilet',
-        impact: 'Unhygienic spatial energy contaminating food preparation.',
-        remedy: 'Keep toilet door permanently closed; fix a Vastu energy plate or mirror facing outward on the kitchen side of the common wall.',
+        impact: 'Unhygienic spatial proximity that can compromise food preparation peace of mind.',
+        remedy: 'Keep toilet door permanently closed; add a tiled wall splashback or wooden panel on the kitchen side.',
       },
       {
-        mistake: 'Black granite countertop in South-East kitchen',
-        impact: 'Black represents the Water element, extinguishing the auspicious Fire energy in Agni Kon.',
-        remedy: 'Use warm green, beige, or brown granite or tiles. If black is already installed, place a green marble slab or wooden board beneath the stove.',
+        mistake: 'Dark, poorly lit cooking counters',
+        impact: 'Insufficient visibility during chopping and cooking increases cutting hazards.',
+        remedy: 'Install under-cabinet LED strip lights (4000K neutral white) for shadow-free countertop illumination.',
+      },
+    ],
+    practicalConsiderations: [
+      {
+        title: 'Kitchen Chimney Suction & Ducting',
+        advice: 'Install an auto-clean chimney with 1100+ m3/hr suction vented through an exterior wall with the shortest possible duct run.',
+      },
+      {
+        title: 'LPG / Piped Natural Gas Safety',
+        advice: 'Keep gas cylinders in an upright, well-ventilated bottom cabinet with a steel-braided hose, inspected every 2 years.',
+      },
+      {
+        title: 'Non-Porous Countertop Sealing',
+        advice: 'Seal granite or quartz countertops annually to prevent turmeric, oil, and citrus stains from penetrating the stone.',
       },
     ],
     faq: [
@@ -524,14 +609,15 @@ export const SEO_TOPIC_PAGES: Record<string, SeoTopicPageData> = {
     subtitle: 'Managing water drainage, elimination, and cleanliness with balance',
     hindiTitle: 'बाथरूम और टॉयलेट का वास्तु: सही दिशा और वास्तु उपाय',
     badge: 'Water & Drainage',
-    intro: 'In classical Vastu, bathrooms and toilets govern the elimination of waste and water drainage. Because modern bathrooms combine high humidity with sanitary elimination, incorrect placement can drain household vitality and financial momentum. Locating and balancing bathrooms correctly ensures physical hygiene and environmental freshness throughout the home.',
+    disclaimerText: TOPIC_DISCLAIMER,
+    intro: 'In classical Vastu, bathrooms and toilets govern water drainage and personal hygiene. Because modern bathrooms combine high humidity with sanitary elimination, thoughtful layout choices mitigate excess dampness and ensure household freshness and physical cleanliness throughout the home.',
     keyRule: 'Locate toilets in North-West (Vayavya) or South of South-West (SSW). Sit facing North or South on the commode. Never place toilets in North-East or Brahmasthan.',
     idealDirections: [
       {
         direction: 'North-West (Vayavya)',
         hindiName: 'वायव्य कोण',
         verdict: 'Best',
-        explanation: 'Air and elimination. Facilitates rapid clearance of waste, dampness, and stagnant humidity.',
+        explanation: 'Air and elimination. Facilitates rapid clearance of steam, dampness, and moisture.',
       },
       {
         direction: 'West (Pashchim)',
@@ -543,24 +629,24 @@ export const SEO_TOPIC_PAGES: Record<string, SeoTopicPageData> = {
         direction: 'South of South-West (SSW)',
         hindiName: 'दक्षिण-नैऋत्य',
         verdict: 'Best',
-        explanation: 'The classical zone of disposal and detoxification (Visarjan).',
+        explanation: 'The classical zone of disposal and detoxification in traditional texts.',
       },
       {
         direction: 'North-East (Ishan)',
         hindiName: 'ईशान कोण',
         verdict: 'Avoid',
-        explanation: 'The sacred water and mental clarity zone. Toilets here disrupt peace, health, and family prosperity.',
+        explanation: 'In traditional Vastu, North-East is reserved for calm and contemplative spaces. Modern non-structural remedies help manage dampness and ventilation.',
       },
     ],
     goldenPrinciples: [
       {
         title: 'Commode Axis (North-South)',
-        description: 'Position the toilet seat or commode along the North-South axis so the user faces either North or South while seated. Avoid facing East towards the rising sun.',
+        description: 'Position the toilet seat along the North-South axis so the user faces either North or South while seated, respecting traditional orientation.',
         remedyTip: 'Align commode against South or West wall facing North.',
       },
       {
         title: 'Ventilation & Dryness',
-        description: 'Damp, dark bathrooms breed microbial growth and stagnant energy. Always provide an exhaust fan or window on the North or West wall.',
+        description: 'Damp, dark bathrooms breed microbial growth and unpleasant odors. Always provide an exhaust fan or window on the North or West wall.',
         remedyTip: 'Keep bathroom doors closed at all times to prevent moisture migration into bedrooms or halls.',
       },
       {
@@ -572,32 +658,46 @@ export const SEO_TOPIC_PAGES: Record<string, SeoTopicPageData> = {
     commonMistakes: [
       {
         mistake: 'Toilet located in North-East (Ishan Kon)',
-        impact: 'Considered one of the most severe Vastu imbalances, draining peace and clarity.',
-        remedy: 'Keep a bowl of natural sea salt/rock salt inside to absorb damp vibrations. Replace weekly. Install a brass strip around the commode base.',
+        impact: 'Traditional texts view this placement as unfavorable due to moisture and energy clash; proper exhaust fans and hygiene mitigate practical issues.',
+        remedy: 'Keep a bowl of natural sea salt inside to absorb dampness, replace weekly, and ensure high-CFM exhaust fan.',
       },
       {
         mistake: 'Toilet sharing a common wall with pooja mandir or kitchen',
-        impact: 'Spiritual and culinary contamination of sacred household zones.',
+        impact: 'Sensory and culinary discomfort from shared plumbing noises and moisture.',
         remedy: 'Do not mount the pooja altar directly onto the shared wall. Create a 3-inch gap or install a wooden panel between the spaces.',
       },
       {
         mistake: 'Leaving toilet seat lid open permanently',
-        impact: 'Permits odors, humidity, and negative vibrations to diffuse into bedrooms.',
-        remedy: 'Cultivate the habit of closing the commode lid immediately after use and keeping the door shut.',
+        impact: 'Allows aerosol plumes and humidity to diffuse into attached bedrooms.',
+        remedy: 'Cultivate the habit of closing the commode lid immediately after flushing and keeping the door shut.',
+      },
+    ],
+    practicalConsiderations: [
+      {
+        title: 'Anti-Slip Flooring Tiles',
+        advice: 'Install textured, matte ceramic tiles with an R10 anti-slip rating to prevent dangerous bathroom fall injuries.',
+      },
+      {
+        title: 'Waterproofing Membrane',
+        advice: 'Apply dual-coat polymer cementitious waterproofing up to 7 feet high in shower wet areas during construction or renovation.',
+      },
+      {
+        title: 'P-Trap Floor Drains',
+        advice: 'Install deep-seal anti-cockroach floor traps with water barriers to prevent sewer gas backdrafts into the home.',
       },
     ],
     faq: [
       {
         question: 'Which is the worst direction for a toilet in Vastu?',
-        answer: 'North-East (Ishan Kon) is the most critical direction to avoid for a toilet, followed by the exact center of the house (Brahmasthan).',
+        answer: 'North-East (Ishan Kon) is the most critical direction to avoid for a toilet in classical Vastu, followed by the exact center of the house (Brahmasthan).',
       },
       {
         question: 'What direction should I face while using the commode?',
-        answer: 'Vastu recommends facing either North or South while seated on the commode. Avoid facing East or West.',
+        answer: 'Vastu traditionally recommends facing either North or South while seated on the commode. Avoid facing East or West.',
       },
       {
         question: 'How can I fix a toilet in the wrong direction in an apartment?',
-        answer: 'Use non-structural remedies: place a bowl of rock salt in a bronze dish, keep the door closed, use an exhaust fan, fix a zinc or copper Vastu wire on the floor around the commode, and keep the space well-lit.',
+        answer: 'Use non-structural remedies: place a bowl of rock salt on a high dry shelf, keep the door closed, run an active exhaust fan, and keep the room brightly illuminated.',
       },
     ],
     internalLinks: [
@@ -618,20 +718,21 @@ export const SEO_TOPIC_PAGES: Record<string, SeoTopicPageData> = {
     subtitle: 'Reflecting light, spatial expansiveness, and energetic clarity',
     hindiTitle: 'दर्पण / आईने का वास्तु: सही दिशा और प्लेसमेंट के नियम',
     badge: 'Reflection & Light',
-    intro: 'In Vastu Shastra, mirrors are powerful energetic conductors because they represent the Water element (Jal Tatva). Mirrors double whatever they reflect—be it natural morning sunlight, lush green vistas, or dark cluttered corners. Placing mirrors consciously enhances spatial depth and prosperity while avoiding restlessness and domestic friction.',
-    keyRule: 'Place mirrors on the North or East walls so they reflect positive vibrations from those directions. Never place a mirror directly facing the bed.',
+    disclaimerText: TOPIC_DISCLAIMER,
+    intro: 'In Vastu Shastra, mirrors are associated with the Water element (Jal Tatva). Mirrors visually double whatever they reflect—be it natural morning sunlight, lush outdoor greenery, or dark cluttered corners. Placing mirrors consciously enhances spatial depth and visual brightness while preventing sudden nighttime reflections.',
+    keyRule: 'Place mirrors on the North or East walls so they reflect daylight from those directions. Avoid placing a mirror directly facing the sleeping bed.',
     idealDirections: [
       {
         direction: 'North Wall (Uttar)',
         hindiName: 'उत्तर की दीवार',
         verdict: 'Best',
-        explanation: 'Ruled by Kuber. A mirror on the North wall facing South reflects wealth energy back into the house.',
+        explanation: 'Associated with Kuber in tradition. A mirror on the North wall facing South reflects ambient light and creates a feeling of expansiveness.',
       },
       {
         direction: 'East Wall (Purva)',
         hindiName: 'पूर्व की दीवार',
         verdict: 'Best',
-        explanation: 'Welcomes the rising sun and daylight into darker interior spaces, enhancing vitality and health.',
+        explanation: 'Welcomes the morning sun and daylight into darker interior spaces, enhancing vitality and visual warmth.',
       },
       {
         direction: 'North-East Wall',
@@ -643,19 +744,19 @@ export const SEO_TOPIC_PAGES: Record<string, SeoTopicPageData> = {
         direction: 'South or West Walls',
         hindiName: 'दक्षिण / पश्चिम दीवार',
         verdict: 'Avoid',
-        explanation: 'Causes mirrors to face North or East, potentially doubling heavy South/West energies.',
+        explanation: 'Causes mirrors to face North or East, which classical Vastu considers less optimal for light reflection.',
       },
     ],
     goldenPrinciples: [
       {
         title: 'No Reflection of the Sleeping Bed',
-        description: 'A mirror reflecting the bed creates constant psychological motion in the room, causing disturbed REM sleep, insomnia, and strain between couples.',
+        description: 'A mirror reflecting the bed can create subconscious movement illusions at night, leading to disturbed sleep continuity.',
         remedyTip: 'Position the dressing table beside the bed or cover the mirror with a curtain or cloth at bedtime.',
       },
       {
         title: 'Reflect Pleasant Sights',
-        description: 'Position mirrors where they capture views of lush greenery, daylight, or serene artwork. Avoid positioning mirrors where they reflect clutter, garbage bins, or toilets.',
-        remedyTip: 'Place a mirror in the dining room reflecting the dining table to symbolically double food and family abundance.',
+        description: 'Position mirrors where they capture views of lush greenery, daylight, or serene artwork. Avoid positioning mirrors where they reflect clutter or garbage bins.',
+        remedyTip: 'Place a mirror in the dining room reflecting the dining table to symbolically celebrate food and family abundance.',
       },
       {
         title: 'Square or Rectangular Shapes',
@@ -666,24 +767,38 @@ export const SEO_TOPIC_PAGES: Record<string, SeoTopicPageData> = {
     commonMistakes: [
       {
         mistake: 'Mirror directly facing the main entrance door',
-        impact: 'Bounces incoming positive prana energy right back out of the house before it enters.',
+        impact: 'Can startle family members upon entry and visually bounces incoming natural light outward.',
         remedy: 'Move the mirror to an adjacent wall perpendicular to the entrance rather than directly facing the doorway.',
       },
       {
         mistake: 'Two mirrors placed directly facing each other',
-        impact: 'Creates an infinite optical corridor that causes restlessness, anxiety, and disorientation.',
-        remedy: 'Offset one mirror so their reflection paths do not intersect continuously.',
+        impact: 'Creates an infinite optical corridor that causes disorientation and visual restlessness.',
+        remedy: 'Offset one mirror so their reflection paths do not intersect directly.',
       },
       {
         mistake: 'Using cracked, cloudy, or distorted glass mirrors',
-        impact: 'Distorts household clarity, self-perception, and spatial aesthetics.',
+        impact: 'Distorts visual clarity and self-image in the home.',
         remedy: 'Immediately replace broken or antique rusted mirrors with clear, high-grade float glass.',
+      },
+    ],
+    practicalConsiderations: [
+      {
+        title: 'Secure Wall Mounting Hardware',
+        advice: 'Always use heavy-duty wall anchors and double-bracket cleats rather than single picture-hanging nails when mounting heavy framed mirrors.',
+      },
+      {
+        title: 'Anti-Fog Coatings for Bathrooms',
+        advice: 'Install defogger heating pads behind bathroom mirrors to keep glass crystal-clear during warm, steamy showers.',
+      },
+      {
+        title: 'Beveled Safety Edges',
+        advice: 'Ensure frameless mirrors have polished beveled edges to prevent accidental skin cuts during cleaning.',
       },
     ],
     faq: [
       {
         question: 'Which wall is best for hanging a mirror according to Vastu?',
-        answer: 'The North and East walls are the best walls for mounting mirrors, as the mirror will face South or West, drawing in auspicious energy from the North and East.',
+        answer: 'The North and East walls are traditionally the best walls for mounting mirrors, drawing in natural ambient daylight.',
       },
       {
         question: 'What if my dressing table mirror reflects the bed and cannot be moved?',
@@ -691,7 +806,7 @@ export const SEO_TOPIC_PAGES: Record<string, SeoTopicPageData> = {
       },
       {
         question: 'Can I keep a mirror in the dining room?',
-        answer: 'Yes! A mirror on the North or East wall of the dining room reflecting the dining table is highly auspicious and symbolizes abundance and health.',
+        answer: 'Yes! A mirror on the North or East wall of the dining room reflecting the dining table is a popular design choice that enhances perceived dining space.',
       },
     ],
     internalLinks: [
@@ -712,32 +827,33 @@ export const SEO_TOPIC_PAGES: Record<string, SeoTopicPageData> = {
     subtitle: 'Accurate compass calibration, planetary rulers, and zoning for every room',
     hindiTitle: 'वास्तु दिशा चक्र: 8 दिशाएं, तत्व और कम्पास गाइड',
     badge: 'Directional Science',
-    intro: 'Directions form the bedrock of Vastu Shastra. The Earth rotates on its magnetic axis from West to East, immersed in cosmic solar radiation from the Sun. By dividing any plot or apartment into 8 primary directions (Ashta Dikpalas) and the central Brahmasthan, Vastu creates an elemental grid that designates the most supportive location for every domestic activity.',
+    disclaimerText: TOPIC_DISCLAIMER,
+    intro: 'Directions form the bedrock of Vastu Shastra. The Earth rotates on its magnetic axis from West to East, immersed in cosmic solar radiation. By dividing any plot or apartment into 8 primary directions and the central Brahmasthan, Vastu creates an elemental grid that designates the most supportive location for domestic activities.',
     keyRule: 'Calibrate from the true center of your home using a magnetic or digital compass. Identify the 8 directional zones to place rooms in harmony with their natural elements.',
     idealDirections: [
       {
         direction: 'North-East (Ishan Kon) • Water',
         hindiName: 'ईशान कोण (जल तत्व)',
         verdict: 'Best',
-        explanation: 'Ruled by Jupiter & Shiva. Highest vibrational zone. Ideal for meditation, mandir, water storage, and study.',
+        explanation: 'Associated with Jupiter in tradition. Ideal for meditation, mandir, study nooks, and clean water features.',
       },
       {
         direction: 'South-East (Agni Kon) • Fire',
         hindiName: 'आग्नेय कोण (अग्नि तत्व)',
         verdict: 'Best',
-        explanation: 'Ruled by Venus & Agni. Energy and digestive warmth. Ideal for kitchen, gas stove, inverter, and electrical meters.',
+        explanation: 'Associated with Agni. Thermal and cooking warmth. Ideal for kitchen, gas stove, inverter, and electrical meters.',
       },
       {
         direction: 'South-West (Nairutya) • Earth',
         hindiName: 'नैऋत्य कोण (पृथ्वी तत्व)',
         verdict: 'Best',
-        explanation: 'Ruled by Rahu & Nirruti. Stability, authority, and grounding. Ideal for master bedroom, heavy wardrobes, and safe.',
+        explanation: 'Heavy earth element in tradition. Stability and grounding. Ideal for master bedroom, heavy wardrobes, and safe storage.',
       },
       {
         direction: 'North-West (Vayavya) • Air',
         hindiName: 'वायव्य कोण (वायु तत्व)',
         verdict: 'Best',
-        explanation: 'Ruled by Moon & Vayu. Movement, transitions, and communication. Ideal for guest rooms, vehicles, and storage.',
+        explanation: 'Movement and transitions. Ideal for guest rooms, pantry storage, and finished product packaging.',
       },
     ],
     goldenPrinciples: [
@@ -748,12 +864,12 @@ export const SEO_TOPIC_PAGES: Record<string, SeoTopicPageData> = {
       },
       {
         title: 'The Ashta Dikpalas (8 Cardinal Guardians)',
-        description: 'Each direction has a natural guardian and planetary energy: North (Kuber/Mercury), East (Indra/Sun), South (Yama/Mars), West (Varun/Saturn), NE (Shiva/Jupiter), SE (Agni/Venus), SW (Nirruti/Rahu), NW (Vayu/Moon).',
+        description: 'Each direction has a traditional guardian and elemental association: North (Water), East (Air/Solar), South (Earth/Fire), West (Water/Space).',
         remedyTip: 'Balance the dominant element of each zone with corresponding decor materials and natural lighting.',
       },
       {
         title: 'Slope and Weight Distribution (LOD Rule)',
-        description: 'In classical architecture, the South and West sides should carry heavier physical loads and be higher, while North and East should remain lighter, lower, and open to daylight.',
+        description: 'In classical architecture, the South and West sides carry heavier physical loads, while North and East remain lighter and open to daylight.',
         remedyTip: 'Keep heavy storage, overhead water tanks, and solid wardrobes in South-West; keep North-East clear.',
       },
     ],
@@ -774,6 +890,20 @@ export const SEO_TOPIC_PAGES: Record<string, SeoTopicPageData> = {
         remedy: 'Use diagonal corner-to-corner intersection to find the exact geometric centroid of your floor plan.',
       },
     ],
+    practicalConsiderations: [
+      {
+        title: 'Balcony Solar Shading',
+        advice: 'South and West balconies receive intense afternoon thermal radiation. Install louvered exterior blinds or outdoor bamboo chick blinds.',
+      },
+      {
+        title: 'Wind Direction & Window Operability',
+        advice: 'Position casement windows to catch prevailing summer breezes (usually South-West or North-West across central and northern India).',
+      },
+      {
+        title: 'True North vs Magnetic North',
+        advice: 'Account for magnetic declination (typically 0.5 to 2 degrees across India), which is negligible for home furniture layout purposes.',
+      },
+    ],
     faq: [
       {
         question: 'How do I determine the exact center (Brahmasthan) of my house?',
@@ -785,7 +915,7 @@ export const SEO_TOPIC_PAGES: Record<string, SeoTopicPageData> = {
       },
       {
         question: 'Can phone compass apps be trusted for Vastu?',
-        answer: 'Modern smartphone magnetometers are highly accurate when calibrated away from strong electromagnetic appliances like microwaves or large steel beams.',
+        answer: 'Modern smartphone magnetometers are accurate when calibrated away from strong electromagnetic appliances like microwaves or large steel beams.',
       },
     ],
     internalLinks: [
@@ -806,20 +936,21 @@ export const SEO_TOPIC_PAGES: Record<string, SeoTopicPageData> = {
     subtitle: 'Simple, actionable adjustments for peace, positivity, and prosperity in flats and houses',
     hindiTitle: 'घर के लिए आवश्यक वास्तु टिप्स: आसान और प्रभावशाली उपाय',
     badge: 'Actionable Tips',
-    intro: 'Vastu Shastra does not require tearing down walls or incurring heavy renovation expenses. The essence of practical Vastu (सरल वास्तु) lies in subtle, thoughtful adjustments to your living environment—optimizing furniture angles, clearing thermal clutter, introducing living air-purifying plants, placing wall clocks mindfully, and balancing natural light.',
+    disclaimerText: TOPIC_DISCLAIMER,
+    intro: 'Vastu Shastra does not require tearing down walls or incurring heavy renovation expenses. The essence of practical Vastu (सरल वास्तु) lies in subtle, thoughtful adjustments to your living environment—optimizing furniture angles, clearing clutter, introducing living air-purifying plants, placing wall clocks mindfully, and balancing natural light.',
     keyRule: 'Keep the North-East clean, ensure the entrance is brightly lit, sleep with your head to the South or East, and introduce natural green plants in the East/North zones.',
     idealDirections: [
       {
         direction: 'Wall Clock Direction',
         hindiName: 'दीवार घड़ी',
         verdict: 'Best',
-        explanation: 'Mount clocks on North or East walls to symbolize forward movement and auspicious timing. Avoid above doors.',
+        explanation: 'Mount clocks on North or East walls to symbolize forward momentum and auspicious timing.',
       },
       {
         direction: 'Indoor Plants Placement',
         hindiName: 'इंडोर पौधे',
         verdict: 'Best',
-        explanation: 'Place Money plants, Tulsi, and Peace Lilies in North, East, or North-East. Avoid thorny cacti inside.',
+        explanation: 'Place Money plants, Tulsi, and Peace Lilies in North, East, or North-East. Avoid thorny cacti indoors.',
       },
       {
         direction: 'Living Room Sofas',
@@ -831,41 +962,55 @@ export const SEO_TOPIC_PAGES: Record<string, SeoTopicPageData> = {
         direction: 'Shoe Rack Placement',
         hindiName: 'जूते-चप्पल रैक',
         verdict: 'Acceptable',
-        explanation: 'Keep in West or North-West in an enclosed wooden cabinet. Never directly in front of main entrance.',
+        explanation: 'Keep in West or North-West in an enclosed wooden cabinet. Avoid placing directly in front of main entrance doorway.',
       },
     ],
     goldenPrinciples: [
       {
         title: 'Morning Sunlight Infusion',
-        description: 'Open windows in the East and North each morning for at least 20 minutes to purge stagnant night air and infuse the house with fresh ionized prana and natural ultraviolet light.',
+        description: 'Open windows in the East and North each morning for at least 20 minutes to purge stagnant night air and infuse the house with fresh natural light.',
         remedyTip: 'Use sheer white or linen curtains on East windows to filter gentle morning daylight.',
       },
       {
         title: 'The Power of Living Greenery',
-        description: 'Plants like Holy Basil (Tulsi), Money Plant, Snake Plant, and Areca Palm filter indoor volatile organic compounds (VOCs) and symbolize vitality.',
+        description: 'Plants like Holy Basil (Tulsi), Money Plant, Snake Plant, and Areca Palm filter indoor air and symbolize vitality and renewal.',
         remedyTip: 'Keep a healthy Tulsi plant in North-East or East; keep a Money plant in South-East in a soil pot.',
       },
       {
         title: 'Wall Clock Vastu Guidelines',
-        description: 'A wall clock represents the rhythm of life and future opportunities. Never allow a clock to remain stopped with dead batteries, and never keep clocks with cracked glass.',
+        description: 'A wall clock represents the rhythm of life and momentum. Never allow a clock to remain stopped with dead batteries.',
         remedyTip: 'Mount clocks on the North or East wall of the living room at eye level.',
       },
     ],
     commonMistakes: [
       {
         mistake: 'Keeping broken clocks, stopped watches, or fractured mirrors',
-        impact: 'Subconsciously symbolizes stalled progress, delay in commitments, and stagnation.',
-        remedy: 'Fix batteries immediately or safely discard broken timepieces and mirrors.',
+        impact: 'Subconsciously symbolizes stalled progress and neglect.',
+        remedy: 'Replace batteries immediately or safely discard broken timepieces and mirrors.',
       },
       {
         mistake: 'Keeping thorny cacti or dying dried flowers as decor',
-        impact: 'Dried flowers carry dead energetic residue; sharp thorns create tense visual prickliness.',
-        remedy: 'Replace with vibrant fresh flowers or low-maintenance living indoor foliage like Money plants or Jade.',
+        impact: 'Dried flowers accumulate dust; sharp thorns create visually prickly environments.',
+        remedy: 'Replace with vibrant fresh flowers or low-maintenance living indoor foliage like Jade or Money plant.',
       },
       {
         mistake: 'Heavy clutter stored beneath the bed',
-        impact: 'Blocks magnetic circulation underneath the sleeping body, causing restlessness.',
-        remedy: 'Clean underbed storage; avoid storing broken metal tools, old bills, or shoes directly under where you sleep.',
+        impact: 'Blocks airflow underneath the sleeping body and collects dust bunnies.',
+        remedy: 'Clean underbed storage; avoid storing broken metal items or shoes directly under where you sleep.',
+      },
+    ],
+    practicalConsiderations: [
+      {
+        title: 'Indoor Air Quality Monitoring',
+        advice: 'Use indoor plants (Snake Plant, Spider Plant) in living areas and open windows daily to reduce volatile organic compounds (VOCs).',
+      },
+      {
+        title: 'Emergency Lighting & Flashlights',
+        advice: 'Keep a rechargeable LED emergency light in a known hallway outlet in case of evening power outages.',
+      },
+      {
+        title: 'Fire Safety in Kitchen & Pooja Areas',
+        advice: 'Keep a compact 1kg ABC dry-powder fire extinguisher mounted near the kitchen exit and never leave burning oil lamps unattended.',
       },
     ],
     faq: [

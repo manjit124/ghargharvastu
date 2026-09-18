@@ -1024,6 +1024,36 @@ async function startServer() {
     });
   });
 
+  // Public Contact Form Endpoint
+  app.post("/api/contact", (req, res) => {
+    try {
+      const { name, email, category, subject, message } = req.body || {};
+      if (!name || !email || !message) {
+        return res.status(400).json({
+          success: false,
+          error: "MISSING_REQUIRED_FIELDS",
+          message: "Name, email address, and message are required.",
+        });
+      }
+
+      console.log(`[Contact Form] Submission from ${name} <${email}> [Category: ${category || 'general'}]: ${subject || 'No subject'}`);
+
+      // Successfully logged
+      return res.json({
+        success: true,
+        message: "Thank you for contacting Ghar Ghar Vastu. Your message has been received and our team will respond within 24 business hours.",
+        receivedAt: new Date().toISOString(),
+      });
+    } catch (err: any) {
+      console.error("[Contact Form] Error processing contact submission:", err);
+      return res.status(500).json({
+        success: false,
+        error: "INTERNAL_ERROR",
+        message: "Failed to process inquiry. Please email support@ghargharvastu.com directly.",
+      });
+    }
+  });
+
   // ==========================================
   // AUTHORITATIVE CREDIT & MONETIZATION ENDPOINTS
   // ==========================================
@@ -2032,7 +2062,7 @@ async function startServer() {
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`VastuVision AI server running on http://0.0.0.0:${PORT} [Model: ${CONFIGURED_MODEL}]`);
+    console.log(`Ghar Ghar Vastu server running on http://0.0.0.0:${PORT} [Model: ${CONFIGURED_MODEL}]`);
   });
 }
 

@@ -26,6 +26,11 @@ import { SEO_TOPIC_PAGES } from './data/seoPagesData';
 import { SeoTopicPageView } from './components/SeoTopicPageView';
 import { BlogHubView } from './components/BlogHubView';
 import { analyticsService } from './services/analyticsService';
+import { AboutView } from './components/legal/AboutView';
+import { ContactView } from './components/legal/ContactView';
+import { PrivacyPolicyView } from './components/legal/PrivacyPolicyView';
+import { TermsConditionsView } from './components/legal/TermsConditionsView';
+import { DisclaimerView } from './components/legal/DisclaimerView';
 
 const INITIAL_PROFILE: UserProfile = {
   id: '',
@@ -45,7 +50,20 @@ const INITIAL_PROFILE: UserProfile = {
 
 export default function App() {
   const { config } = useAppConfig();
-  const [activeView, setActiveView] = useState<string>('home');
+  const [activeView, setActiveView] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const p = window.location.pathname.toLowerCase();
+      if (p === '/about' || p === '/about-us') return 'about';
+      if (p === '/contact' || p === '/contact-us') return 'contact';
+      if (p === '/privacy-policy') return 'privacy-policy';
+      if (p === '/terms' || p === '/terms-and-conditions') return 'terms';
+      if (p === '/disclaimer') return 'disclaimer';
+      if (p === '/blog' || p.startsWith('/blog/')) return 'blog';
+      if (p === '/ai-vastu-advisor' || p === '/chat') return 'chat';
+      if (p === '/image-analysis' || p === '/photo-analysis') return 'photo-analysis';
+    }
+    return 'home';
+  });
   const [currentTopicSlug, setCurrentTopicSlug] = useState<string | null>(null);
   const [currentBlogSlug, setCurrentBlogSlug] = useState<string | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
@@ -143,33 +161,44 @@ export default function App() {
         return;
       }
 
-      // Public Modals & Pages via URL
+      // Public Informational & Legal Pages via URL
       if (pathname === '/pricing') {
         setIsMonetizationOpen(true);
         return;
       }
-      if (pathname === '/privacy-policy') {
-        setLegalModalType('privacy');
+      if (pathname === '/about' || pathname === '/about-us') {
+        setActiveView('about');
+        setCurrentTopicSlug(null);
+        setCurrentBlogSlug(null);
+        setLegalModalType(null);
         return;
       }
-      if (pathname === '/terms') {
-        setLegalModalType('terms');
+      if (pathname === '/contact' || pathname === '/contact-us') {
+        setActiveView('contact');
+        setCurrentTopicSlug(null);
+        setCurrentBlogSlug(null);
+        setLegalModalType(null);
+        return;
+      }
+      if (pathname === '/privacy-policy') {
+        setActiveView('privacy-policy');
+        setCurrentTopicSlug(null);
+        setCurrentBlogSlug(null);
+        setLegalModalType(null);
+        return;
+      }
+      if (pathname === '/terms' || pathname === '/terms-and-conditions' || pathname === '/refund-policy') {
+        setActiveView('terms');
+        setCurrentTopicSlug(null);
+        setCurrentBlogSlug(null);
+        setLegalModalType(null);
         return;
       }
       if (pathname === '/disclaimer') {
-        setLegalModalType('disclaimer');
-        return;
-      }
-      if (pathname === '/refund-policy') {
-        setLegalModalType('terms');
-        return;
-      }
-      if (pathname === '/contact') {
-        setLegalModalType('contact');
-        return;
-      }
-      if (pathname === '/about') {
-        setLegalModalType('disclaimer');
+        setActiveView('disclaimer');
+        setCurrentTopicSlug(null);
+        setCurrentBlogSlug(null);
+        setLegalModalType(null);
         return;
       }
       if (pathname === '/faq') {
@@ -243,11 +272,16 @@ export default function App() {
 
     const viewTitles: Record<string, string> = {
       home: 'Ghar Ghar Vastu - AI Vastu Shastra Consultant',
+      about: 'About Ghar Ghar Vastu | AI Vastu Guidance',
+      contact: 'Contact Ghar Ghar Vastu | Support & Help',
+      'privacy-policy': 'Privacy Policy - Ghar Ghar Vastu',
+      terms: 'Terms & Conditions - Ghar Ghar Vastu',
+      disclaimer: 'Vastu Disclaimer | Ghar Ghar Vastu',
       chat: 'AI Vastu Advisor - Ghar Ghar Vastu',
       'photo-analysis': 'Vastu Photo Analysis - Ghar Ghar Vastu',
       scan: 'Room Compass Scan - Ghar Ghar Vastu',
       explore: 'Explore Vastu Library - Ghar Ghar Vastu',
-      'all-rooms': 'Complete Home Scan - Ghar Ghar Vastu',
+      'complete-home': 'Complete Home Scan - Ghar Ghar Vastu',
       'colour-advisor': 'Vastu Colour Advisor - Ghar Ghar Vastu',
       'object-placement': 'Vastu Object Placement - Ghar Ghar Vastu',
     };
@@ -414,6 +448,66 @@ export default function App() {
       return;
     }
 
+    if (view === 'about') {
+      setActiveView('about');
+      setCurrentTopicSlug(null);
+      setCurrentBlogSlug(null);
+      setLegalModalType(null);
+      if (typeof window !== 'undefined' && window.history?.pushState) {
+        window.history.pushState(null, '', '/about');
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    if (view === 'contact') {
+      setActiveView('contact');
+      setCurrentTopicSlug(null);
+      setCurrentBlogSlug(null);
+      setLegalModalType(null);
+      if (typeof window !== 'undefined' && window.history?.pushState) {
+        window.history.pushState(null, '', '/contact');
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    if (view === 'privacy-policy') {
+      setActiveView('privacy-policy');
+      setCurrentTopicSlug(null);
+      setCurrentBlogSlug(null);
+      setLegalModalType(null);
+      if (typeof window !== 'undefined' && window.history?.pushState) {
+        window.history.pushState(null, '', '/privacy-policy');
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    if (view === 'terms' || view === 'terms-and-conditions') {
+      setActiveView('terms');
+      setCurrentTopicSlug(null);
+      setCurrentBlogSlug(null);
+      setLegalModalType(null);
+      if (typeof window !== 'undefined' && window.history?.pushState) {
+        window.history.pushState(null, '', '/terms-and-conditions');
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    if (view === 'disclaimer') {
+      setActiveView('disclaimer');
+      setCurrentTopicSlug(null);
+      setCurrentBlogSlug(null);
+      setLegalModalType(null);
+      if (typeof window !== 'undefined' && window.history?.pushState) {
+        window.history.pushState(null, '', '/disclaimer');
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     if (view === 'home') {
       setActiveView('home');
       setCurrentTopicSlug(null);
@@ -423,6 +517,16 @@ export default function App() {
       }
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
+    }
+
+    if (view === 'chat') {
+      if (typeof window !== 'undefined' && window.history?.pushState) {
+        window.history.pushState(null, '', '/ai-vastu-advisor');
+      }
+    } else if (view === 'photo-analysis') {
+      if (typeof window !== 'undefined' && window.history?.pushState) {
+        window.history.pushState(null, '', '/image-analysis');
+      }
     }
 
     setActiveView(view);
@@ -636,6 +740,26 @@ export default function App() {
             onUploadPhotoForObject={(obj) => handleUploadPhotoForCategory(obj)}
           />
         )}
+
+        {activeView === 'about' && (
+          <AboutView onNavigate={handleNavigate} />
+        )}
+
+        {activeView === 'contact' && (
+          <ContactView onNavigate={handleNavigate} />
+        )}
+
+        {activeView === 'privacy-policy' && (
+          <PrivacyPolicyView onNavigate={handleNavigate} />
+        )}
+
+        {activeView === 'terms' && (
+          <TermsConditionsView onNavigate={handleNavigate} />
+        )}
+
+        {activeView === 'disclaimer' && (
+          <DisclaimerView onNavigate={handleNavigate} />
+        )}
       </main>
 
       {/* Footer with Crawlable Links */}
@@ -743,30 +867,56 @@ export default function App() {
           {/* Legal / Trust links & Copyright */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
             <div className="flex flex-wrap items-center gap-4 text-stone-500 font-medium">
-              <button
-                onClick={() => setLegalModalType('disclaimer')}
+              <a
+                href="/about"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleNavigate('about');
+                }}
                 className="hover:text-amber-800 transition-colors"
               >
-                Vastu Disclaimer
-              </button>
-              <button
-                onClick={() => setLegalModalType('privacy')}
+                About Us
+              </a>
+              <a
+                href="/contact"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleNavigate('contact');
+                }}
+                className="hover:text-amber-800 transition-colors"
+              >
+                Contact Us
+              </a>
+              <a
+                href="/privacy-policy"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleNavigate('privacy-policy');
+                }}
                 className="hover:text-amber-800 transition-colors"
               >
                 Privacy Policy
-              </button>
-              <button
-                onClick={() => setLegalModalType('terms')}
+              </a>
+              <a
+                href="/terms-and-conditions"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleNavigate('terms');
+                }}
                 className="hover:text-amber-800 transition-colors"
               >
-                Terms of Service
-              </button>
-              <button
-                onClick={() => setLegalModalType('contact')}
+                Terms & Conditions
+              </a>
+              <a
+                href="/disclaimer"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleNavigate('disclaimer');
+                }}
                 className="hover:text-amber-800 transition-colors"
               >
-                Contact Support
-              </button>
+                Disclaimer
+              </a>
             </div>
 
             <div className="text-[11px] text-stone-400 text-center sm:text-right">

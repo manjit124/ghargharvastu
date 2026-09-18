@@ -110,7 +110,7 @@ export const Header: React.FC<HeaderProps> = ({
         <div
           onClick={handleLogoTap}
           className="flex items-center gap-2 sm:gap-2.5 cursor-pointer select-none group touch-manipulation min-w-0 shrink"
-          title="VastuVision AI"
+          title="Ghar Ghar Vastu"
         >
           <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr from-amber-600 via-amber-500 to-yellow-500 text-white flex items-center justify-center font-heading font-extrabold text-lg sm:text-xl shadow-md shadow-amber-600/20 group-hover:scale-105 transition-transform shrink-0">
             G

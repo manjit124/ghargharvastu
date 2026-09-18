@@ -13,6 +13,8 @@ import {
   ChevronRight,
   ShieldCheck,
   BookOpen,
+  Wrench,
+  Info,
 } from 'lucide-react';
 
 interface SeoTopicPageViewProps {
@@ -106,6 +108,7 @@ export const SeoTopicPageView: React.FC<SeoTopicPageViewProps> = ({
   const idealDirections = Array.isArray(topic.idealDirections) ? topic.idealDirections : [];
   const goldenPrinciples = Array.isArray(topic.goldenPrinciples) ? topic.goldenPrinciples : [];
   const commonMistakes = Array.isArray(topic.commonMistakes) ? topic.commonMistakes : [];
+  const practicalConsiderations = Array.isArray(topic.practicalConsiderations) ? topic.practicalConsiderations : [];
   const internalLinks = Array.isArray(topic.internalLinks) ? topic.internalLinks : [];
 
   // Structured data for rich search engine indexing
@@ -347,6 +350,46 @@ export const SeoTopicPageView: React.FC<SeoTopicPageViewProps> = ({
               </div>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Practical & Real-World Considerations */}
+      {practicalConsiderations.length > 0 && (
+        <section className="space-y-4">
+          <div className="space-y-1">
+            <h2 className="text-xl sm:text-2xl font-heading font-bold text-stone-900 flex items-center gap-2">
+              <Wrench className="w-5 h-5 text-amber-700" />
+              <span>Practical & Real-World Considerations</span>
+            </h2>
+            <p className="text-xs text-stone-500">
+              Ventilation, safety, daylighting, and modern architectural best practices
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {practicalConsiderations.map((tip, idx) => (
+              <div
+                key={idx}
+                className="p-4 rounded-2xl bg-amber-50/50 border border-amber-200/70 shadow-2xs space-y-1.5"
+              >
+                <h3 className="text-xs sm:text-sm font-bold text-amber-950 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>{tip.title}</span>
+                </h3>
+                <p className="text-xs text-stone-600 leading-relaxed">{tip.advice}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Contextual Advisory Disclaimer */}
+      <section className="p-4 rounded-2xl bg-stone-100 border border-stone-200/80 text-stone-600 text-xs leading-relaxed flex items-start gap-2.5">
+        <Info className="w-4 h-4 text-stone-500 shrink-0 mt-0.5" />
+        <div>
+          <strong className="text-stone-800 font-bold">Important Notice: </strong>
+          {topic.disclaimerText ||
+            'Vastu suggestions on this page represent traditional cultural beliefs and historical architectural conventions. They are not empirical scientific laws, medical cures, or financial guarantees. Always prioritize structural safety, building bylaws, and personal comfort.'}
         </div>
       </section>
 

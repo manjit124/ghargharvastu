@@ -12,6 +12,8 @@ import {
   Camera,
   CheckCircle2,
   Share2,
+  Wrench,
+  Info,
 } from 'lucide-react';
 
 interface BlogHubViewProps {
@@ -224,6 +226,37 @@ export const BlogHubView: React.FC<BlogHubViewProps> = ({
             <p className="text-xs sm:text-sm leading-relaxed text-stone-700">
               {activeArticle.content.conclusion}
             </p>
+          </section>
+
+          {/* Practical & Original Value Section */}
+          {activeArticle.practicalValue && (
+            <section className="p-5 sm:p-6 rounded-2xl bg-amber-50/60 border border-amber-200/80 space-y-3">
+              <h3 className="text-base sm:text-lg font-heading font-bold text-stone-900 flex items-center gap-2">
+                <Wrench className="w-5 h-5 text-amber-700" />
+                <span>{activeArticle.practicalValue.title}</span>
+              </h3>
+              <p className="text-xs text-stone-500">
+                Beyond traditional principles: ventilation, acoustics, ergonomics, and real-world considerations
+              </p>
+              <ul className="space-y-2 pt-1">
+                {activeArticle.practicalValue.tips.map((tip, idx) => (
+                  <li key={idx} className="flex items-start gap-2.5 text-xs sm:text-sm text-stone-700">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <span>{tip}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {/* Contextual Advisory Disclaimer */}
+          <section className="p-4 rounded-2xl bg-stone-100 border border-stone-200/80 text-stone-600 text-xs leading-relaxed flex items-start gap-2.5">
+            <Info className="w-4 h-4 text-stone-500 shrink-0 mt-0.5" />
+            <div>
+              <strong className="text-stone-800 font-bold">Important Notice: </strong>
+              {activeArticle.articleDisclaimer ||
+                'Vastu recommendations in this article are based on traditional cultural beliefs and architectural history. They should not be treated as scientifically proven causes, medical cures, financial advice, or guaranteed outcomes. Always prioritize building codes, fire safety, structural integrity, and personal comfort.'}
+            </div>
           </section>
         </div>
 

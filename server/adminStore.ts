@@ -1412,7 +1412,7 @@ class AdminDataStore {
         return p;
       });
 
-      // Ensure makesoney@gmail.com, shivshahidoors@gmail.com, admin@ghargharvastu.com, and admin@vastuvision.ai are active admins
+      // Ensure makesoney@gmail.com, shivshahidoors@gmail.com, admin@ghargharvastu.com, and support@ghargharvastu.com are active admins
       const targetAdmins = [
         {
           id: 'admin_super_1',
@@ -1428,8 +1428,8 @@ class AdminDataStore {
         },
         {
           id: 'admin_super_3',
-          name: 'Vastu System Administrator',
-          email: 'admin@vastuvision.ai',
+          name: 'Vastu Support Administrator',
+          email: 'support@ghargharvastu.com',
           role: 'SUPER_ADMIN' as const,
         },
         {
